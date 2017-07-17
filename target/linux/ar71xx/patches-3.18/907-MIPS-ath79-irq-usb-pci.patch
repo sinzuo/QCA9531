@@ -1,0 +1,647 @@
+diff --git a/arch/mips/ath79/dev-usb.c b/arch/mips/ath79/dev-usb.c
+index 56f9f3c..724881d 100644
+--- a/arch/mips/ath79/dev-usb.c
++++ b/arch/mips/ath79/dev-usb.c
+@@ -41,6 +41,44 @@ static struct usb_ehci_pdata ath79_ehci_pdata_v2 = {
+ 	.qca_force_16bit_ptw	= 1,
+ };
+ 
++static struct resource ath79_ehci0_resources[2];
++static u64 ath79_ehci_dmamask = DMA_BIT_MASK(32);
++
++struct usb_ehci_pdata ath79_ehci0_pdata_v2 = {
++	.caps_offset		= 0x100,
++	.has_tt			= 1,
++	//.port_power_off		= 1,
++};
++
++
++static struct platform_device ath79_ehci0_device = {
++	.name		= "ehci-platform",
++	.id		= 0,
++	.resource	= ath79_ehci0_resources,
++	.num_resources	= ARRAY_SIZE(ath79_ehci0_resources),
++	.dev = {
++		.dma_mask		= &ath79_ehci_dmamask,
++		.coherent_dma_mask	= DMA_BIT_MASK(32),
++	},
++};
++
++static void __init ath79_usb_init_resource(struct resource res[2],
++					   unsigned long base,
++					   unsigned long size,
++					   int irq)
++{
++	memset(res, 0, sizeof(res));
++
++	res[0].flags = IORESOURCE_MEM;
++	res[0].start = base;
++	res[0].end = base + size - 1;
++
++	res[1].flags = IORESOURCE_IRQ;
++	res[1].start = irq;
++	res[1].end = irq;
++}
++
++
+ static void __init ath79_usb_register(const char *name, int id,
+ 				      unsigned long base, unsigned long size,
+ 				      int irq, const void *data,
+@@ -236,6 +274,36 @@ static void __init ar934x_usb_setup(void)
+ 			   &ath79_ehci_pdata_v2, sizeof(ath79_ehci_pdata_v2));
+ }
+ 
++static void __init qca953x_usb_setup(void)
++{
++        u32 bootstrap;
++
++        bootstrap = ath79_reset_rr(QCA953X_RESET_REG_BOOTSTRAP);
++
++        ath79_device_reset_set(QCA953X_RESET_USBSUS_OVERRIDE);
++        udelay(1000);
++
++        ath79_device_reset_clear(QCA953X_RESET_USB_PHY);
++        udelay(1000);
++
++        ath79_device_reset_clear(QCA953X_RESET_USB_PHY_ANALOG);
++        udelay(1000);
++
++        ath79_device_reset_clear(QCA953X_RESET_USB_HOST);
++        udelay(1000);
++
++        ath79_usb_init_resource(ath79_ehci0_resources, QCA953X_EHCI_BASE,
++                                QCA953X_EHCI_SIZE, ATH79_CPU_IRQ_USB);
++        ath79_ehci0_device.dev.platform_data = &ath79_ehci0_pdata_v2;
++        
++        
++        	ath79_usb_register("ehci-platform", -1,
++			   QCA953X_EHCI_BASE, QCA953X_EHCI_SIZE,
++			   ATH79_CPU_IRQ_USB,
++			   &ath79_ehci0_pdata_v2, sizeof(ath79_ehci0_pdata_v2));
++}
++
++
+ static void qca955x_usb_reset_notifier(struct platform_device *pdev)
+ {
+ 	u32 base;
+@@ -297,6 +365,8 @@ void __init ath79_register_usb(void)
+ 		ar913x_usb_setup();
+ 	else if (soc_is_ar933x())
+ 		ar933x_usb_setup();
++	else if (soc_is_qca953x())
++                qca953x_usb_setup();
+ 	else if (soc_is_ar934x())
+ 		ar934x_usb_setup();
+ 	else if (soc_is_qca955x())
+diff --git a/arch/mips/ath79/dev-wmac.c b/arch/mips/ath79/dev-wmac.c
+index 9e9a2cc..2c010f4 100644
+--- a/arch/mips/ath79/dev-wmac.c
++++ b/arch/mips/ath79/dev-wmac.c
+@@ -24,9 +24,16 @@
+ #include <asm/mach-ath79/ar71xx_regs.h>
+ #include "common.h"
+ #include "dev-wmac.h"
++#include <linux/ath79_wlan.h>
+ 
+ static u8 ath79_wmac_mac[ETH_ALEN];
+ 
++//#define ATH79_WLAN_FW_DUMP 1
++
++#ifdef ATH79_WLAN_FW_DUMP
++void *ath79_wlan_fw_dump_addr;
++#endif
++
+ static struct ath9k_platform_data ath79_wmac_data = {
+ 	.led_pin = -1,
+ };
+@@ -63,6 +70,36 @@ static int ar913x_wmac_reset(void)
+ 	return 0;
+ }
+ 
++#ifdef ATH79_WLAN_FW_DUMP
++int ath79_get_wlan_fw_dump_buffer (void** dump_buff, u32 *buff_size)
++{
++	int ret=0;
++
++	if (ath79_wlan_fw_dump_addr) {
++		*dump_buff = ath79_wlan_fw_dump_addr;
++		*buff_size = ATH79_FW_DUMP_MEM_SIZE;
++	} else {
++		*dump_buff = NULL;
++		*buff_size = 0;
++		ret = -1;
++	}
++	return ret;
++}
++EXPORT_SYMBOL(ath79_get_wlan_fw_dump_buffer);
++EXPORT_SYMBOL(ath79_wlan_fw_dump_addr);
++
++static void ath79_init_wlan_fw_dump_buffer (void)
++{
++	ath79_wlan_fw_dump_addr = kmalloc(ATH79_FW_DUMP_MEM_SIZE, GFP_ATOMIC);
++	if (ath79_wlan_fw_dump_addr)
++		printk("\nWLAN firmware dump buffer allocation of %d bytes @ address 0x%p- SUCCESS !!!",
++		ATH79_FW_DUMP_MEM_SIZE, (void*)ath79_wlan_fw_dump_addr);
++	else
++		printk("\nWLAN firmware dump buffer allocation-FAILED!!!");
++
++}
++#endif
++
+ static void __init ar913x_wmac_setup(void)
+ {
+ 	ar913x_wmac_reset();
+@@ -159,8 +196,8 @@ static void qca953x_wmac_setup(void)
+ 
+ 	ath79_wmac_resources[0].start = QCA953X_WMAC_BASE;
+ 	ath79_wmac_resources[0].end = QCA953X_WMAC_BASE + QCA953X_WMAC_SIZE - 1;
+-	ath79_wmac_resources[1].start = ATH79_CPU_IRQ(2);
+-	ath79_wmac_resources[1].end = ATH79_CPU_IRQ(2);
++	ath79_wmac_resources[1].start = ATH79_IP2_IRQ(1);
++	ath79_wmac_resources[1].end = ATH79_IP2_IRQ(1);
+ 
+ 	t = ath79_reset_rr(QCA953X_RESET_REG_BOOTSTRAP);
+ 	if (t & QCA953X_BOOTSTRAP_REF_CLK_40)
+@@ -425,10 +462,15 @@ void __init ath79_register_wmac(u8 *cal_data, u8 *mac_addr)
+ 	}
+ 
+ 	platform_device_register(&ath79_wmac_device);
++	
++#ifdef ATH79_WLAN_FW_DUMP
++	ath79_init_wlan_fw_dump_buffer();
++#endif
+ }
+ 
+ void __init ath79_register_wmac_simple(void)
+ {
+ 	ath79_register_wmac(NULL, NULL);
+ 	ath79_wmac_data.eeprom_name = "soc_wmac.eeprom";
++
+ }
+diff --git a/arch/mips/ath79/irq.c b/arch/mips/ath79/irq.c
+index 6d1f058..fc02502 100644
+--- a/arch/mips/ath79/irq.c
++++ b/arch/mips/ath79/irq.c
+@@ -156,6 +156,54 @@ static void ar934x_ip2_irq_init(void)
+ 	irq_set_chained_handler(ATH79_CPU_IRQ(2), ar934x_ip2_irq_dispatch);
+ }
+ 
++
++
++static void qca953x_ip2_irq_dispatch(unsigned int irq, struct irq_desc *desc)
++{
++	u32 status;
++
++	disable_irq_nosync(irq);
++
++	status = ath79_reset_rr(QCA953X_RESET_REG_PCIE_WMAC_INT_STATUS);
++
++	if (status & QCA953X_PCIE_WMAC_INT_PCIE_ALL) {
++		ath79_ddr_wb_flush(QCA953X_DDR_REG_FLUSH_PCIE);
++		generic_handle_irq(ATH79_IP2_IRQ(0));
++	} else if (status & QCA953X_PCIE_WMAC_INT_WMAC_ALL) {
++		ath79_ddr_wb_flush(QCA953X_DDR_REG_FLUSH_WMAC);
++		generic_handle_irq(ATH79_IP2_IRQ(1));
++	} else {
++		spurious_interrupt();
++	}
++
++	enable_irq(irq);
++}
++
++static void qca953x_irq_init(void)
++{
++        int i;
++
++        for (i = ATH79_IP2_IRQ_BASE;
++             i < ATH79_IP2_IRQ_BASE + ATH79_IP2_IRQ_COUNT; i++)
++                irq_set_chip_and_handler(i, &ip2_chip, handle_level_irq);
++
++        irq_set_chained_handler(ATH79_CPU_IRQ(2), qca953x_ip2_irq_dispatch);
++}
++
++/*
++static void qca953x_irq_init(void)
++{
++	int i;
++
++	for (i = ATH79_IP2_IRQ_BASE;
++	     i < ATH79_IP2_IRQ_BASE + ATH79_IP2_IRQ_COUNT; i++)
++		irq_set_chip_and_handler(i, &dummy_irq_chip,
++					 handle_level_irq);
++
++	irq_set_chained_handler(ATH79_CPU_IRQ(2), qca953x_ip2_irq_dispatch);
++}
++*/
++
+ static void qca955x_ip2_irq_dispatch(unsigned int irq, struct irq_desc *desc)
+ {
+ 	u32 status;
+@@ -218,7 +266,13 @@ static void qca955x_ip3_irq_dispatch(unsigned int irq, struct irq_desc *desc)
+ enable:
+ 	enable_irq(irq);
+ }
+-
++/*
++static void qca953x_ip3_handler(void)
++{
++	ath79_ddr_wb_flush(QCA953X_DDR_REG_FLUSH_USB);
++	do_IRQ(ATH79_CPU_IRQ_USB);
++}
++*/
+ static void qca955x_irq_init(void)
+ {
+ 	int i;
+@@ -490,6 +544,8 @@ void __init arch_init_irq(void)
+ 
+ 	if (soc_is_ar934x())
+ 		ar934x_ip2_irq_init();
++	else if (soc_is_qca953x())
++		qca953x_irq_init();
+ 	else if (soc_is_qca955x())
+ 		qca955x_irq_init();
+ 	else if (soc_is_qca956x())
+diff --git a/arch/mips/ath79/mach-ap147.c b/arch/mips/ath79/mach-ap147.c
+index 92f9b4b..c5016f1 100644
+--- a/arch/mips/ath79/mach-ap147.c
++++ b/arch/mips/ath79/mach-ap147.c
+@@ -26,11 +26,22 @@
+ #include "machtypes.h"
+ #include "pci.h"
+ 
++
++/*
++#define AP147_GPIO_LED_WAN      4
++#define AP147_GPIO_LED_LAN1     16
++#define AP147_GPIO_LED_LAN2     15
++#define AP147_GPIO_LED_LAN3     14
++#define AP147_GPIO_LED_LAN4     11
++#define AP147_GPIO_LED_STATUS   13
++#define AP147_GPIO_LED_WLAN_2G  12
++*/
++
+ #define AP147_GPIO_LED_WAN	4
+-#define AP147_GPIO_LED_LAN1	16
+-#define AP147_GPIO_LED_LAN2	15
+-#define AP147_GPIO_LED_LAN3	14
+-#define AP147_GPIO_LED_LAN4	11
++#define AP147_GPIO_LED_LAN1	1
++#define AP147_GPIO_LED_LAN2	2
++#define AP147_GPIO_LED_LAN3	3
++#define AP147_GPIO_LED_LAN4	0
+ #define AP147_GPIO_LED_STATUS	13
+ #define AP147_GPIO_LED_WLAN_2G	12
+ 
+@@ -95,7 +106,7 @@ static void __init ap147_setup(void)
+ 					ARRAY_SIZE(ap147_gpio_keys),
+ 					ap147_gpio_keys);
+ 
+-	//ath79_register_usb();
++	ath79_register_usb();
+ 
+ 	ath79_register_pci();
+ 
+diff --git a/arch/mips/ath79/mach-tl-wr841n-v9.c b/arch/mips/ath79/mach-tl-wr841n-v9.c
+index c28afc6..f58adbd 100644
+--- a/arch/mips/ath79/mach-tl-wr841n-v9.c
++++ b/arch/mips/ath79/mach-tl-wr841n-v9.c
+@@ -10,7 +10,7 @@
+ 
+ #include <linux/gpio.h>
+ #include <linux/platform_device.h>
+-
++#include <linux/ar8216_platform.h>
+ #include <asm/mach-ath79/ath79.h>
+ #include <asm/mach-ath79/ar71xx_regs.h>
+ 
+@@ -21,6 +21,7 @@
+ #include "dev-m25p80.h"
+ #include "dev-wmac.h"
+ #include "machtypes.h"
++#include "pci.h"
+ 
+ #define TL_WR841NV9_GPIO_LED_WLAN	13
+ #define TL_WR841NV9_GPIO_LED_QSS	3
+@@ -30,12 +31,16 @@
+ #define TL_WR841NV9_GPIO_LED_LAN3	14
+ #define TL_WR841NV9_GPIO_LED_LAN4	11
+ 
+-#define TL_WR841NV9_GPIO_BTN_RESET	12
+-#define TL_WR841NV9_GPIO_BTN_WIFI	17
++#define TL_WR841NV9_GPIO_BTN_RESET	17
++#define TL_WR841NV9_GPIO_BTN_WIFI	12
+ 
+ #define TL_WR841NV9_KEYS_POLL_INTERVAL	20	/* msecs */
+ #define TL_WR841NV9_KEYS_DEBOUNCE_INTERVAL (3 * TL_WR841NV9_KEYS_POLL_INTERVAL)
+ 
++#define AP147_MAC0_OFFSET		6
++#define AP147_MAC1_OFFSET		0
++#define AP147_WMAC_CALDATA_OFFSET	0x1000
++
+ static const char *tl_wr841n_v9_part_probes[] = {
+ 	"tp-link",
+ 	NULL,
+@@ -98,6 +103,7 @@ static struct gpio_keys_button tl_wr841n_v9_gpio_keys[] __initdata = {
+ 
+ static void __init tl_ap143_setup(void)
+ {
++	/*
+ 	u8 *mac = (u8 *) KSEG1ADDR(0x1f01fc00);
+ 	u8 *ee = (u8 *) KSEG1ADDR(0x1fff1000);
+ 	u8 tmpmac[ETH_ALEN];
+@@ -108,11 +114,11 @@ static void __init tl_ap143_setup(void)
+ 
+ 	ath79_register_mdio(0, 0x0);
+ 
+-	/* LAN */
++
+ 	ath79_init_mac(ath79_eth1_data.mac_addr, mac, 0);
+ 	ath79_register_eth(1);
+ 
+-	/* WAN */
++
+ 	ath79_switch_data.phy4_mii_en = 1;
+ 	ath79_eth0_data.phy_if_mode = PHY_INTERFACE_MODE_MII;
+ 	ath79_init_mac(ath79_eth0_data.mac_addr, mac, 1);
+@@ -120,6 +126,41 @@ static void __init tl_ap143_setup(void)
+ 
+ 	ath79_init_mac(tmpmac, mac, 0);
+ 	ath79_register_wmac(ee, tmpmac);
++	* */
++	
++		u8 *art = (u8 *) KSEG1ADDR(0x1fff0000);
++		ath79_register_m25p80(&tl_wr841n_v9_flash_data);
++		
++	//		ath79_register_usb();
++	ath79_register_pci();
++		
++	ath79_register_wmac(art + AP147_WMAC_CALDATA_OFFSET, NULL);
++
++
++
++	ath79_setup_ar933x_phy4_switch(false, false);
++
++	ath79_register_mdio(0, 0x0);
++	ath79_register_mdio(1, 0x0);
++
++	ath79_init_mac(ath79_eth0_data.mac_addr, art + AP147_MAC0_OFFSET, 0);
++	ath79_init_mac(ath79_eth1_data.mac_addr, art + AP147_MAC1_OFFSET, 0);
++	/* LAN */
++	ath79_eth1_data.phy_if_mode = PHY_INTERFACE_MODE_GMII;
++	ath79_eth1_data.duplex = DUPLEX_FULL;
++	ath79_switch_data.phy_poll_mask |= BIT(4);
++	//ath79_init_mac(ath79_eth1_data.mac_addr, art, 0);
++	ath79_register_eth(1);
++
++	/* WAN */
++	ath79_switch_data.phy4_mii_en = 1;
++	ath79_eth0_data.phy_if_mode = PHY_INTERFACE_MODE_MII;
++	ath79_eth0_data.duplex = DUPLEX_FULL;
++	ath79_eth0_data.speed = SPEED_100;
++	ath79_eth0_data.phy_mask = BIT(4);
++	//ath79_init_mac(ath79_eth0_data.mac_addr, art, 1);
++	ath79_register_eth(0);
++	
+ }
+ 
+ static void __init tl_wr841n_v9_setup(void)
+@@ -134,5 +175,5 @@ static void __init tl_wr841n_v9_setup(void)
+ 					tl_wr841n_v9_gpio_keys);
+ }
+ 
+-MIPS_MACHINE(ATH79_MACH_TL_WR841N_V9, "TL-WR841N-v9", "TP-LINK TL-WR841N/ND v9",
++MIPS_MACHINE(ATH79_MACH_TL_WR841N_V9, "TL-WR841N-v9", "TZ",
+ 	     tl_wr841n_v9_setup);
+diff --git a/arch/mips/ath79/pci.c b/arch/mips/ath79/pci.c
+index 04a5030..c42e1ad 100644
+--- a/arch/mips/ath79/pci.c
++++ b/arch/mips/ath79/pci.c
+@@ -22,6 +22,14 @@
+ #include <asm/mach-ath79/irq.h>
+ #include "pci.h"
+ 
++
++#define QCA953X_PCI_CFG_BASE0  0x14000000
++#define QCA953X_PCI_CTRL_BASE0 (AR71XX_APB_BASE + 0x000f0000)
++#define QCA953X_PCI_CRP_BASE0  (AR71XX_APB_BASE + 0x000c0000)
++#define QCA953X_PCI_MEM_BASE0  0x10000000
++#define QCA953X_PCI_MEM_SIZE   0x02000000
++
++
+ static int (*ath79_pci_plat_dev_init)(struct pci_dev *dev);
+ static const struct ath79_pci_irq *ath79_pci_irq_map __initdata;
+ static unsigned ath79_pci_nr_irqs __initdata;
+@@ -68,19 +76,28 @@ static const struct ath79_pci_irq qca955x_pci_irq_map[] __initconst = {
+ 	},
+ };
+ 
+-static const struct ath79_pci_irq qca956x_pci_irq_map[] __initconst = {
+-	{
+-		.bus    = 0,
+-		.slot   = 0,
+-		.pin    = 1,
+-		.irq    = ATH79_PCI_IRQ(0),
+-	},
++static const struct ath79_pci_irq qca953x_pci_irq_map[] __initconst = {
+ 	{
+-		.bus    = 1,
+-		.slot   = 0,
+-		.pin    = 1,
+-		.irq    = ATH79_PCI_IRQ(1),
+-	},
++		.bus	= 0,
++		.slot	= 0,
++		.pin	= 1,
++		.irq	= ATH79_PCI_IRQ(0),
++	}
++};
++
++static const struct ath79_pci_irq qca956x_pci_irq_map[] __initconst = {
++        {
++                .bus    = 0,
++                .slot   = 0,
++                .pin    = 1,
++                .irq    = ATH79_PCI_IRQ(0),
++        },
++        {
++                .bus    = 1,
++                .slot   = 0,
++                .pin    = 1,
++                .irq    = ATH79_PCI_IRQ(1),
++        },
+ };
+ 
+ int __init pcibios_map_irq(const struct pci_dev *dev, uint8_t slot, uint8_t pin)
+@@ -101,7 +118,10 @@ int __init pcibios_map_irq(const struct pci_dev *dev, uint8_t slot, uint8_t pin)
+ 		} else if (soc_is_qca955x()) {
+ 			ath79_pci_irq_map = qca955x_pci_irq_map;
+ 			ath79_pci_nr_irqs = ARRAY_SIZE(qca955x_pci_irq_map);
+-		} else if (soc_is_qca9561()) {
++		} else if (soc_is_qca953x()) {
++			ath79_pci_irq_map = qca953x_pci_irq_map;
++			ath79_pci_nr_irqs = ARRAY_SIZE(qca953x_pci_irq_map);
++		} else if (soc_is_qca956x()) {
+ 			ath79_pci_irq_map = qca956x_pci_irq_map;
+ 			ath79_pci_nr_irqs = ARRAY_SIZE(qca956x_pci_irq_map);
+ 		} else {
+@@ -157,7 +177,7 @@ static struct platform_device *
+ ath79_register_pci_ar71xx(void)
+ {
+ 	struct platform_device *pdev;
+-	struct resource res[4];
++	struct resource res[2];
+ 
+ 	memset(res, 0, sizeof(res));
+ 
+@@ -170,16 +190,6 @@ ath79_register_pci_ar71xx(void)
+ 	res[1].start = ATH79_CPU_IRQ(2);
+ 	res[1].end = ATH79_CPU_IRQ(2);
+ 
+-	res[2].name = "io_base";
+-	res[2].flags = IORESOURCE_IO;
+-	res[2].start = 0;
+-	res[2].end = 0;
+-
+-	res[3].name = "mem_base";
+-	res[3].flags = IORESOURCE_MEM;
+-	res[3].start = AR71XX_PCI_MEM_BASE;
+-	res[3].end = AR71XX_PCI_MEM_BASE + AR71XX_PCI_MEM_SIZE - 1;
+-
+ 	pdev = platform_device_register_simple("ar71xx-pci", -1,
+ 					       res, ARRAY_SIZE(res));
+ 	return pdev;
+@@ -198,6 +208,9 @@ ath79_register_pci_ar724x(int id,
+ 	struct platform_device *pdev;
+ 	struct resource res[6];
+ 
++	printk("pci irq %d \n ",irq);
++
++
+ 	memset(res, 0, sizeof(res));
+ 
+ 	res[0].name = "cfg_base";
+@@ -321,7 +334,16 @@ int __init ath79_register_pci(void)
+ 						 QCA955X_PCI_MEM_SIZE,
+ 						 1,
+ 						 ATH79_IP3_IRQ(2));
+-	} else if (soc_is_qca9561()) {
++	} else if (soc_is_qca953x()) {
++		pdev = ath79_register_pci_ar724x(0,
++						 QCA953X_PCI_CFG_BASE0,
++						 QCA953X_PCI_CTRL_BASE0,
++						 QCA953X_PCI_CRP_BASE0,
++						 QCA953X_PCI_MEM_BASE0,
++						 QCA953X_PCI_MEM_SIZE,
++						 0,
++						 ATH79_IP2_IRQ(0));
++	} else if (soc_is_qca956x()) {
+ 		pdev = ath79_register_pci_ar724x(0,
+ 						 QCA956X_PCI_CFG_BASE1,
+ 						 QCA956X_PCI_CTRL_BASE1,
+diff --git a/arch/mips/include/asm/mach-ath79/ar71xx_regs.h b/arch/mips/include/asm/mach-ath79/ar71xx_regs.h
+index 76d650a..123baf6 100644
+--- a/arch/mips/include/asm/mach-ath79/ar71xx_regs.h
++++ b/arch/mips/include/asm/mach-ath79/ar71xx_regs.h
+@@ -108,6 +108,69 @@
+ #define QCA953X_WMAC_BASE	(AR71XX_APB_BASE + 0x00100000)
+ #define QCA953X_WMAC_SIZE	0x20000
+ 
++#define QCA953X_EHCI_BASE       0x1b000000
++#define QCA953X_EHCI0_BASE	0x1b000000
++#define QCA953X_EHCI1_BASE	0x1b400000
++#define QCA953X_EHCI_SIZE	0x2000
++#define QCA953X_GMAC_BASE   (AR71XX_APB_BASE + 0x00070000)
++#define QCA953X_GMAC_SIZE   0x14
++#define QCA953X_SRIF_BASE   (AR71XX_APB_BASE + 0x00116000)
++#define QCA953X_SRIF_SIZE   0x1000
++#define QCA953X_PCI_CFG_BASE0   0x14000000
++#define QCA953X_PCI_CTRL_BASE0  (AR71XX_APB_BASE + 0x000f0000)
++#define QCA953X_PCI_CRP_BASE0   (AR71XX_APB_BASE + 0x000c0000)
++#define QCA953X_PCI_MEM_BASE0   0x10000000
++#define QCA953X_PCI_MEM_SIZE    0x02000000
++
++#define QCA953X_RESET_USB_EXT_PWR   BIT(29)
++#define QCA953X_RESET_EXTERNAL      BIT(28)
++#define QCA953X_RESET_RTC       BIT(27)
++#define QCA953X_RESET_FULL_CHIP     BIT(24)
++#define QCA953X_RESET_GE1_MDIO      BIT(23)
++#define QCA953X_RESET_GE0_MDIO      BIT(22)
++#define QCA953X_RESET_CPU_NMI       BIT(21)
++#define QCA953X_RESET_CPU_COLD      BIT(20)
++#define QCA953X_RESET_DDR       BIT(16)
++#define QCA953X_RESET_USB_PHY_PLL_PWD_EXT BIT(15)
++#define QCA953X_RESET_GE1_MAC       BIT(13)
++#define QCA953X_RESET_ETH_SWITCH_ANALOG BIT(12)
++#define QCA953X_RESET_USB_PHY_ANALOG    BIT(11)
++#define QCA953X_RESET_GE0_MAC       BIT(9)
++#define QCA953X_RESET_ETH_SWITCH    BIT(8)
++#define QCA953X_RESET_PCIE_PHY      BIT(7)
++#define QCA953X_RESET_PCIE      BIT(6)
++#define QCA953X_RESET_USB_HOST      BIT(5)
++#define QCA953X_RESET_USB_PHY       BIT(4)
++#define QCA953X_RESET_USBSUS_OVERRIDE   BIT(3)
++
++
++#define QCA953X_PCIE_WMAC_INT_WMAC_MISC		BIT(0)
++#define QCA953X_PCIE_WMAC_INT_WMAC_TX		BIT(1)
++#define QCA953X_PCIE_WMAC_INT_WMAC_RXLP		BIT(2)
++#define QCA953X_PCIE_WMAC_INT_WMAC_RXHP		BIT(3)
++#define QCA953X_PCIE_WMAC_INT_PCIE_RC		BIT(4)
++#define QCA953X_PCIE_WMAC_INT_PCIE_RC0		BIT(5)
++#define QCA953X_PCIE_WMAC_INT_PCIE_RC1		BIT(6)
++#define QCA953X_PCIE_WMAC_INT_PCIE_RC2		BIT(7)
++#define QCA953X_PCIE_WMAC_INT_PCIE_RC3		BIT(8)
++#define QCA953X_PCIE_WMAC_INT_WMAC_ALL \
++	(QCA953X_PCIE_WMAC_INT_WMAC_MISC | QCA953X_PCIE_WMAC_INT_WMAC_TX | \
++	 QCA953X_PCIE_WMAC_INT_WMAC_RXLP | QCA953X_PCIE_WMAC_INT_WMAC_RXHP)
++
++
++
++#define QCA953X_DDR_REG_FLUSH_GE0	0x9c
++#define QCA953X_DDR_REG_FLUSH_GE1	0xa0
++#define QCA953X_DDR_REG_FLUSH_USB	0xa4
++#define QCA953X_DDR_REG_FLUSH_PCIE	0xa8
++#define QCA953X_DDR_REG_FLUSH_WMAC	0xac
++#define QCA953X_RESET_REG_PCIE_WMAC_INT_STATUS	0xac
++#define QCA953X_PCIE_WMAC_INT_PCIE_ALL \
++	(QCA953X_PCIE_WMAC_INT_PCIE_RC | QCA953X_PCIE_WMAC_INT_PCIE_RC0 | \
++	 QCA953X_PCIE_WMAC_INT_PCIE_RC1 | QCA953X_PCIE_WMAC_INT_PCIE_RC2 | \
++	 QCA953X_PCIE_WMAC_INT_PCIE_RC3)
++
++
+ #define QCA955X_PCI_MEM_BASE0	0x10000000
+ #define QCA955X_PCI_MEM_BASE1	0x12000000
+ #define QCA955X_PCI_MEM_SIZE	0x02000000
+diff --git a/arch/mips/include/asm/mach-ath79/irq.h b/arch/mips/include/asm/mach-ath79/irq.h
+index 5c9ca76..52677b6 100644
+--- a/arch/mips/include/asm/mach-ath79/irq.h
++++ b/arch/mips/include/asm/mach-ath79/irq.h
+@@ -30,6 +30,9 @@
+ #define ATH79_IP3_IRQ_COUNT     3
+ #define ATH79_IP3_IRQ(_x)       (ATH79_IP3_IRQ_BASE + (_x))
+ 
++
++#define ATH79_CPU_IRQ_USB       (MIPS_CPU_IRQ_BASE +3)
++
+ #include_next <irq.h>
+ 
+ #endif /* __ASM_MACH_ATH79_IRQ_H */
+diff --git a/include/linux/ath79_wlan.h b/include/linux/ath79_wlan.h
+new file mode 100644
+index 0000000..cf08633
+--- /dev/null
++++ b/include/linux/ath79_wlan.h
+@@ -0,0 +1,13 @@
++#ifndef _ATH79_WLAN_H_
++#define _ATH79_WLAN_H
++
++#define ATH79_WLAN_FW_DUMP
++
++#ifdef ATH79_WLAN_FW_DUMP
++#include <linux/export.h>
++#define ATH79_FW_DUMP_MEM_SIZE          ((2*1024*1024))
++
++int ath79_get_wlan_fw_dump_buffer(void** dump_buff, u32 *buff_size);
++#endif /* ATH79_WLAN_FW_DUMP */
++
++#endif /* _ATH79_WLAN_H_ */
