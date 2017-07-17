@@ -1,0 +1,360 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+urlweb="www.baidu.com www.qq.com www.aliyun.com"
+config_load()
+{
+head="FirewallRule allow to "
+
+rules=""
+
+allow=$(uci get wifidog.wifidog.allowwhitelist)
+#echo $allow
+
+if [ -z "$allow" ];then
+
+rules="FirewallRule allow tcp to  0.0.0.0/0"
+
+else
+for  url in $allow ; do
+
+        rules=$rules$head$url"\n"
+#       echo $rules
+#       echo $url
+done
+
+#echo $rules | sed 's/|/\n/g'
+
+#rules="FirewallRule allow to  0.0.0.0/0"
+
+
+fi
+
+rules=$(echo -e  $rules)
+
+	
+	
+	
+        wifidog_enable=$(uci get wifidog.@wifidog[0].wifidog_enable 2>/dev/null)
+     #   uci set wifidog.@wifidog[0].gateway_id=`ifconfig | grep ra0 | cut -d ' ' -f12 2> /dev/null`
+      #  uci commit wifidog.@wifidog[0].gateway_id
+    gateway_id=$(uci get wifidog.@wifidog[0].gateway_id 2>/dev/null)
+    gateway_interface=$(uci get wifidog.@wifidog[0].gateway_interface 2>/dev/null) 
+    gateway_eninterface=$(uci get wifidog.@wifidog[0].gateway_eninterface 2>/dev/null)
+    gateway_hostname=$(uci get wifidog.@wifidog[0].gateway_hostname 2>/dev/null) 
+    gateway_httpport=$(uci get wifidog.@wifidog[0].gateway_httpport 2>/dev/null) 
+    gateway_path=$(uci get wifidog.@wifidog[0].gateway_path 2>/dev/null) 
+    ssl_enable=$(uci get wifidog.@wifidog[0].ssl_enable 2>/dev/null) 
+    gateway_connmax=$(uci get wifidog.@wifidog[0].gateway_connmax 2>/dev/null)     
+    check_interval=$(uci get wifidog.@wifidog[0].check_interval 2>/dev/null)
+    client_timeout=$(uci get wifidog.@wifidog[0].client_timeout 2>/dev/null)
+    weixing_pass=$(uci get wifidog.@wifidog[0].weixing_pass 2>/dev/null)
+    free_no_auth=$(uci get wifidog.@wifidog[0].free_no_auth 2>/dev/null)
+    lan_auth=$(uci get wifidog.@wifidog[0].lan_auth 2>/dev/null)
+                 
+echo "
+GatewayID $gateway_id
+GatewayInterface $gateway_interface
+ExternalInterface $gateway_eninterface
+AuthServer {
+        Hostname $gateway_hostname
+        HTTPPort $gateway_httpport
+        Path $gateway_path
+        }
+
+CheckInterval $check_interval
+ClientTimeout $client_timeout
+HTTPDMaxConn $gateway_connmax
+Weixing_Pass $weixing_pass
+Free_No_Auth $free_no_auth
+Lan_Auth $lan_auth
+
+FirewallRuleSet validating-users {
+    FirewallRule allow to 0.0.0.0/0
+}
+
+FirewallRuleSet known-users {
+    $rules
+}
+
+FirewallRuleSet unknown-users {
+    FirewallRule allow udp port 53
+    FirewallRule allow tcp port 53
+    FirewallRule allow udp port 67
+    FirewallRule allow tcp port 67
+    FirewallRule allow udp port 68
+    FirewallRule allow tcp port 68
+
+}
+
+FirewallRuleSet locked-users {
+    FirewallRule block to 0.0.0.0/0
+}
+" > /etc/wifidog.conf
+
+        gateway_hostname2=$(uci get wifidog.@wifidog[0].gateway_hostname2 2>/dev/null) 
+        gateway_httpport2=$(uci get wifidog.@wifidog[0].gateway_httpport2 2>/dev/null) 
+        gateway_path2=$(uci get wifidog.@wifidog[0].gateway_path2 2>/dev/null) 
+        ssl_enable2=$(uci get wifidog.@wifidog[0].ssl_enable2 2>/dev/null) 
+        if [ "$gateway_hostname2" != "" ]; then
+echo "
+AuthServer {
+        Hostname $gateway_hostname2
+        HTTPPort $gateway_httpport2
+        Path $gateway_path2
+}
+" >> /etc/wifidog.conf
+fi
+}
+
+set_gateway_id()
+{
+gateway_id=`uci get wifidog.wifidog.gateway_id`
+echo $gateway_id
+#mac=`ifconfig eth0 | grep HWaddr | awk -F " " '{print $5}' `
+factory_part=$(find_mtd_part art)
+mac=$(dd bs=1 count=6 if=$factory_part 2>/dev/null | /usr/sbin/maccalc bin2mac)
+echo $mac
+
+#if [ -z  $gateway_id ];then
+
+ uci set wifidog.wifidog.gateway_id=$mac
+ uci commit wifidog
+#fi
+
+
+}
+
+#cp /sbin/doc/home.html /tmp/
+
+config_home()
+{                    
+
+
+ip=`ifconfig br-lan | grep  Mask | awk -F ' '  '{print $2}' | awk -F ':' '{print $2}' ` 
+echo $ip                                                                       
+                                                            
+cat >/tmp/home.html <<EOF                                           
+<html><head><titile>............</title></head>                                 
+<body>                                                                          
+<script language='javascript'>document.location ='http://$ip:2060'</script>    
+</body>                                                                         
+</html>                                                                 
+EOF
+}                                                                          
+
+is_online()
+{
+	
+#urlweb="www.baidu.com"
+renew=1
+
+
+for url in $urlweb 
+do
+
+if ping -c 1 -W 1 $url >/dev/null ;then
+
+renew=0
+
+break
+else
+ continue 
+fi
+
+done
+
+if [ $renew -eq 1 ];then
+
+	mode=$(uci get network.lan.proto)
+	
+
+      [ "$mode" = "dhcp" ] &&  {
+	
+	inter=$(uci get network.lan.ifname)
+
+	for i in $inter
+	do
+
+	#echo $i
+	ifconfig $i down
+
+	done
+
+	killall -9 udhcpc
+
+
+        for i in $inter
+        do
+
+        #echo $i
+        ifconfig $i up
+
+        done
+
+
+	/sbin/2060reset
+	}
+     
+#      mode=$(uci show network.wan.proto)		
+	
+#      [ "$mode" = "dhcp" ] &&  udhcpc -q -C -i eth1
+	
+
+#udhcpc -q -i br-lan -s /usr/share/udhcpc/default.script
+fi
+	
+	
+	
+}
+
+
+
+[ -f /var/2060.pid ] && {
+
+        echo "zzz"
+        pid=`cat /var/2060.pid`
+        echo $pid
+                
+        isexit=`ps |  awk  '{print$1}' |grep -w $pid `
+
+        echo "isexit"$isexit
+
+        [ -z "$isexit" ] || exit
+                
+}
+
+echo $$>/var/2060.pid
+
+cp /etc/wifidog.crt /tmp/wifidog.crt                                            
+cp /etc/wifidog.ca /tmp/wifidog.ca                                              
+cp /etc/wifidog.key /tmp/wifidog.key         
+                                                                      
+/sbin/2060reset
+
+enable=`uci get wifidog.wifidog.wifidog_enable ` 2>/dev/null 
+
+while [ 1 ]
+do
+enable=`uci get wifidog.wifidog.wifidog_enable`
+echo "enable="$enable
+ if [ "$enable" = "1" ];then
+
+
+	Isrun=$(ps | grep wifidog | grep -v grep | wc -l ) 2>/dev/null             
+
+	[ $numpid -eq 2 ] && [ $Isrun -eq 2 ] &&  {
+	
+		/sbin/2060reset                                      
+        
+        echo 1 > /proc/sys/net/bridge/bridge-nf-call-iptables                                                      
+        set_gateway_id                                       
+        config_load                                          
+        wifidog & 		
+	   #numpid=0
+#	echo "get 2 wifidog " > /dev/console	
+	}
+
+ #       echo "here"$Isrun                                                       
+	# if [ $Isrun -ne 1  ];then
+	
+	case $Isrun in
+	
+	0)	
+        echo "xxxwifidog"                                                       
+	/sbin/2060reset	
+	echo 1 > /proc/sys/net/bridge/bridge-nf-call-iptables 
+	set_gateway_id	
+	config_load
+	
+	wifidog &
+#	echo "test numpid is 0 " > /dev/console 
+	;;
+	1)
+	numpid=1
+	#echo "wifidog is ok " > /dev/console	
+	;;
+	
+		
+	*)
+	numpid=2
+	#echo "test numpid is 2 " > /dev/console
+	;;
+
+	esac	
+
+
+
+	#fi
+	
+	#echo "numpid=$numpid" > /dev/console
+	
+
+	
+#fi
+
+#if [ "$enable" = "0" ];then
+else 
+
+	Isrun=$(ps | grep wifidog | grep -v grep) 2>/dev/null
+	echo "here"$Isrun
+	if [ "$Isrun" != "" ];then
+	/sbin/2060reset
+	echo 0 > /proc/sys/net/bridge/bridge-nf-call-iptables 
+	fi
+	
+
+fi
+
+
+
+[ -z "$(ifconfig | grep br-lan:1)" ] && {
+
+
+factory_part=$(find_mtd_part art)
+mac=$(dd bs=1 count=6 if=$factory_part 2>/dev/null | /usr/sbin/maccalc bin2mac)
+echo $mac
+
+echo $mac | awk -F ":" '{print $4""$5""$6 }'
+add1=$(echo $mac | awk -F ":" '{print $4 }')
+echo $add1
+add1=$(printf %d 0x$add1)
+
+add2=$(echo $mac | awk -F ":" '{print $5 }')
+echo $add2
+add2=$(printf %d 0x$add2)
+
+add3=$(echo $mac | awk -F ":" '{print $6 }')
+#echo "xxxx"$add3
+#add3=0x$add3
+add3=$(printf %d 0x$add3)
+echo $add3
+
+
+if [ $add3 -eq 0 ];then
+
+        add3=$(($add3+1))
+        echo $add3
+fi
+
+ifconfig br-lan:1 10.$add1.$add2.$add3
+
+echo "test"
+
+
+}
+
+
+
+
+sleep 30
+
+is_online
+done
+
+
+
+
+
+

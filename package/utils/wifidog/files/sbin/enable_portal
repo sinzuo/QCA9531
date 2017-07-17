@@ -1,0 +1,107 @@
+#!/bin/sh
+
+
+sleep 1
+
+iptables -t nat -F PREROUTING
+
+sleep 1
+
+
+
+iptables -D WiFiDog_br-lan_Unknown -m physdev --physdev-in ath0   -j DROP
+iptables -D WiFiDog_br-lan_Unknown -m physdev --physdev-in ath01   -j DROP
+iptables -D WiFiDog_br-lan_Unknown -m physdev --physdev-in ath02   -j DROP
+iptables -D WiFiDog_br-lan_Unknown -m physdev --physdev-in ath03   -j DROP
+
+
+iptables -D WiFiDog_br-lan_Unknown -m physdev --physdev-in ath1   -j DROP
+iptables -D WiFiDog_br-lan_Unknown -m physdev --physdev-in ath11   -j DROP
+iptables -D WiFiDog_br-lan_Unknown -m physdev --physdev-in ath12   -j DROP
+iptables -D WiFiDog_br-lan_Unknown -m physdev --physdev-in ath13   -j DROP
+
+if [ "$1" != "off" ];then
+
+num0=""
+num1=""
+
+i=0
+
+j=0
+while [ $i -lt 8 ]
+do
+
+	flag=`uci get wireless.@wifi-iface[$i].portal`
+	echo $flag
+
+	
+	if [ "$flag" == "1" ];then
+
+
+	
+	                dev=`uci get wireless.@wifi-iface[$i].device`
+                echo "test *** $dev"                 
+                case "${dev}" in                 
+                        wifi0)                  
+                              	 dev="ath0" 
+				 num=$num0
+				 num0=$(($num0+1))
+	
+				 ;;               
+                        wifi1)                       
+                                dev="ath1"
+				num=$num1
+				num1=$(($num1+1))
+                                ;;
+                esac
+
+			
+		iptables -D WiFiDog_br-lan_Unknown -m physdev --physdev-in $dev$num -j DROP
+		iptables -A WiFiDog_br-lan_Unknown -m physdev --physdev-in $dev$num   -j DROP
+		iptables -t nat -A PREROUTING -m physdev --physdev-in $dev$num -j WiFiDog_br-lan_Outgoing
+	fi
+
+		enable=`uci get wireless.@wifi-iface[$i].disabled`
+	
+		echo "xx$enable"		
+		if [ "$enable" !=  "1" ];then
+		
+		
+		dev=`uci get wireless.@wifi-iface[$i].device`	
+		echo "test $dev"		
+		case "${dev}" in
+                        wifi0) 
+				echo "wifi0"
+				num0=$(($num0+1))
+				echo "num0="$num0
+				;;
+                        wifi1) 
+				echo "wifi1"
+				num1=$(($num1+1))
+				echo "num1="$num1
+                		;;
+		esac
+			
+		
+			
+		fi
+
+
+
+
+
+		
+
+	i=$(($i+1))
+done
+
+
+fi
+
+iptables -t nat -A PREROUTING -j delegate_prerouting
+
+
+
+
+
+

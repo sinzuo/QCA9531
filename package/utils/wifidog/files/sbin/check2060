@@ -1,0 +1,15 @@
+#!/bin/sh
+
+
+#Isrun=$(ps | grep 2060 | grep -v grep | wc -l ) 2>/dev/null
+
+Isrun=$(ps | grep /sbin/2060 | grep -v grep | wc -l ) 2>/dev/null
+
+echo "count= "$Isrun
+
+if [ $Isrun -eq 0 ];then
+	echo "start 2060....."
+	/sbin/2060&
+
+fi
+

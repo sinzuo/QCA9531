@@ -1,0 +1,21 @@
+#!/bin/sh
+
+wifidogrule="WiFiDog_br-lan_Global"
+
+whitelist=`uci get wifidog.wifidog.whitelist`
+#echo $whitelist
+
+for v in $whitelist 
+do
+
+	#echo $v
+	
+ 	iptables -I $wifidogrule -d $v -j ACCEPT
+	iptables -t nat -I $wifidogrule -d $v -j ACCEPT	
+	
+
+done
+
+ /sbin/enable_portal
+
+

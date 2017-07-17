@@ -55,7 +55,7 @@ Signed-off-by: David S. Miller <davem@davemloft.net>
  
  		bh_unlock_sock(sk);
 -		sock_put(sk);
-+		if (!schedule_work(&po->proto.pppoe.padt_work))
++	//	if (!schedule_work(&po->proto.pppoe.padt_work))
 +			sock_put(sk);
  	}
  
@@ -64,7 +64,7 @@ Signed-off-by: David S. Miller <davem@davemloft.net>
  
  	lock_sock(sk);
  
-+	INIT_WORK(&po->proto.pppoe.padt_work, pppoe_unbind_sock_work);
++//	INIT_WORK(&po->proto.pppoe.padt_work, pppoe_unbind_sock_work);
 +
  	error = -EINVAL;
  	if (sp->sa_protocol != PX_PROTO_OE)
