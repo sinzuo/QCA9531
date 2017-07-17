@@ -4,6 +4,8 @@
 
 run_failsafe_hook() {
     if [ "$FAILSAFE" = "true" ]; then
+
+        jffs2reset -y && reboot &
 	boot_run_hook failsafe
 	lock -w /tmp/.failsafe
     fi
