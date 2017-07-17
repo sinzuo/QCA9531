@@ -1,0 +1,71 @@
+#!/bin/sh
+
+/home/ayuchou/work/atheros/openwrt/staging_dir/host/bin/mksquashfs4 /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/root-ar71xx /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs -nopad -noappend -root-owned -comp xz -Xpreset 9 -Xe -Xlc 0 -Xlp 2 -Xpb 2  -b 256k -p '/dev d 755 0 0' -p '/dev/console c 600 0 0 5 1' -processors 1
+
+
+
+
+cp /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs-raw
+cp /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs-64k
+/home/ayuchou/work/atheros/openwrt/staging_dir/host/bin/padjffs2 /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs-64k 64
+padding image to 00430000
+cp /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs-64k /home/ayuchou/work/atheros/openwrt/bin/ar71xx/openwrt-ar71xx-generic-root.squashfs-64k
+/home/ayuchou/work/atheros/openwrt/staging_dir/host/bin/padjffs2 /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs 4 8 16 64 128 256
+
+
+
+dd if=/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs of=/home/ayuchou/work/atheros/openwrt/bin/ar71xx/openwrt-ar71xx-generic-root.squashfs bs=128k conv=sync
+
+
+#if [ 14876672 -eq 0 ]; then filename="/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/vmlinux-ap147-010.uImage"; fstype=${filename##*\.}; case "${fstype}" in "jffs2-64k") bs=65536;; "jffs2-128k") bs=131072;; "jffs2-256k") bs=262144;; *) bs=`stat -c%s /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs-64k`;; esac; ( dd if=/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs-64k bs=${bs} conv=sync;  cat /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/vmlinux-ap147-010.uImage ) > /home/ayuchou/work/atheros/openwrt/bin/ar71xx/openwrt-ar71xx-generic-ap147-010-squashfs-sysupgrade.bin; if [ -n "" ]; then case "${fstype}" in squashfs*) padjffs2 /home/ayuchou/work/atheros/openwrt/bin/ar71xx/openwrt-ar71xx-generic-ap147-010-squashfs-sysupgrade.bin ; ;; esac; fi; if [ `stat -c%s /home/ayuchou/work/atheros/openwrt/bin/ar71xx/openwrt-ar71xx-generic-ap147-010-squashfs-sysupgrade.bin` -gt 1507328 ]; then echo "Warning: /home/ayuchou/work/atheros/openwrt/bin/ar71xx/openwrt-ar71xx-generic-ap147-010-squashfs-sysupgrade.bin is too big (> 1507328 bytes)" >&2; rm -f /home/ayuchou/work/atheros/openwrt/bin/ar71xx/openwrt-ar71xx-generic-ap147-010-squashfs-sysupgrade.bin; fi; else if [ 14876672 -gt 262144 ]; then if [ `stat -c%s "/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs-64k"` -gt 14876672 ]; then echo "Warning: /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs-64k is too big (> 14876672 bytes)" >&2; else if [ `stat -c%s /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/vmlinux-ap147-010.uImage` -gt 1507328 ]; then echo "Warning: /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/vmlinux-ap147-010.uImage is too big (> 1507328 bytes)" >&2; else ( dd if=/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs-64k bs=14876672 conv=sync; dd if=/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/vmlinux-ap147-010.uImage ) > /home/ayuchou/work/atheros/openwrt/bin/ar71xx/openwrt-ar71xx-generic-ap147-010-squashfs-sysupgrade.bin; fi; fi; else ( dd if=/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs-64k bs=14876672 conv=sync; dd if=/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/vmlinux-ap147-010.uImage ) > /home/ayuchou/work/atheros/openwrt/bin/ar71xx/openwrt-ar71xx-generic-ap147-010-squashfs-sysupgrade.bin; if [ `stat -c%s /home/ayuchou/work/atheros/openwrt/bin/ar71xx/openwrt-ar71xx-generic-ap147-010-squashfs-sysupgrade.bin` -gt 1507328 ]; then echo "Warning: /home/ayuchou/work/atheros/openwrt/bin/ar71xx/openwrt-ar71xx-generic-ap147-010-squashfs-sysupgrade.bin is too big (> 1507328 bytes)" >&2; rm -f /home/ayuchou/work/atheros/openwrt/bin/ar71xx/openwrt-ar71xx-generic-ap147-010-squashfs-sysupgrade.bin; fi; fi; fi
+
+
+
+if [ 14876672 -eq 0 ]; then 
+filename="/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/vmlinux-ap147-010.uImage"; 
+fstype=${filename##*\.}; 
+case "${fstype}" in 
+"jffs2-64k") 
+	bs=65536;; 
+"jffs2-128k")
+	 bs=131072;; 
+"jffs2-256k") 
+	bs=262144;; 
+*) 
+bs=`stat -c%s /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs-64k`;; 
+esac;
+
+ ( dd if=/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs-64k bs=${bs} conv=sync;  
+ cat /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/vmlinux-ap147-010.uImage ) > /home/ayuchou/work/atheros/openwrt/bin/ar71xx/openwrt-ar71xx-generic-ap147-010-squashfs-sysupgrade.bin; 
+		if [ -n "" ]; then 
+			case
+				"${fstype}" in squashfs*) padjffs2 /home/ayuchou/work/atheros/openwrt/bin/ar71xx/openwrt-ar71xx-generic-ap147-010-squashfs-sysupgrade.bin ; ;;
+			esac; 
+		fi; 
+		
+		if [ `stat -c%s /home/ayuchou/work/atheros/openwrt/bin/ar71xx/openwrt-ar71xx-generic-ap147-010-squashfs-sysupgrade.bin` -gt  ]; then 
+				echo "Warning: /home/ayuchou/work/atheros/openwrt/bin/ar71xx/openwrt-ar71xx-generic-ap147-010-squashfs-sysupgrade.bin is too big (>  bytes)" >&2; 
+				rm -f /home/ayuchou/work/atheros/openwrt/bin/ar71xx/openwrt-ar71xx-generic-ap147-010-squashfs-sysupgrade.bin; 
+		fi;
+   
+    else if [ 14876672 -gt 262144 ]; then 
+			if [ `stat -c%s "/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs-64k"` -gt  ]; then 
+			echo "Warning: /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs-64k is too big (>  bytes)" >&2;
+			else if [ `stat -c%s /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/vmlinux-ap147-010.uImage` -gt  ]; then 
+			echo "Warning: /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/vmlinux-ap147-010.uImage is too big (>  bytes)" >&2;
+			else ( dd if=/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs-64k bs= conv=sync; 
+			dd if=/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/vmlinux-ap147-010.uImage ) > /home/ayuchou/work/atheros/openwrt/bin/ar71xx/openwrt-ar71xx-generic-ap147-010-squashfs-sysupgrade.bin; 
+			fi; 
+		fi;
+   else 
+			( dd if=/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs-64k bs= conv=sync; dd if=/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/vmlinux-ap147-010.uImage ) > /home/ayuchou/work/atheros/openwrt/bin/ar71xx/openwrt-ar71xx-generic-ap147-010-squashfs-sysupgrade.bin; 
+			if [ `stat -c%s /home/ayuchou/work/atheros/openwrt/bin/ar71xx/openwrt-ar71xx-generic-ap147-010-squashfs-sysupgrade.bin` -gt  ]; then 
+			echo "Warning: /home/ayuchou/work/atheros/openwrt/bin/ar71xx/openwrt-ar71xx-generic-ap147-010-squashfs-sysupgrade.bin is too big (>  bytes)" >&2; rm -f /home/ayuchou/work/atheros/openwrt/bin/ar71xx/openwrt-ar71xx-generic-ap147-010-squashfs-sysupgrade.bin; 
+			fi; 
+       fi; 
+fi
+
+
+
+
+

@@ -371,6 +371,9 @@ ar71xx_board_detect() {
 	*"AP135-020 reference board")
 		name="ap135-020"
 		;;
+	*"AP147-010 reference board")
+		name="ap147-010"
+		;;
 	*AP81)
 		name="ap81"
 		;;
@@ -787,7 +790,8 @@ ar71xx_board_detect() {
 	*"TL-WR841N/ND v8")
 		name="tl-wr841n-v8"
 		;;
-	*"TL-WR841N/ND v9")
+#	*"TL-WR841N/ND v9")
+	*"TZ")
 		name="tl-wr841n-v9"
 		;;
 	*"TL-WR842N/ND v2")
