@@ -1,0 +1,10 @@
+#!/bin/sh
+
+test -f /sbin/2060 &&  /sbin/2060 &
+
+#/sbin/autochannel &
+
+test -f /sbin/shengji &&  /sbin/shengji &
+
+
+

