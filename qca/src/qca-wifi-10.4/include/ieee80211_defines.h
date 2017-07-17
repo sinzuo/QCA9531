@@ -1805,8 +1805,8 @@ struct ieee80211_stats {
     u_int32_t   total_num_offchan_tx_data; /* total number of offchan TX data frames */
     u_int32_t   num_offchan_tx_failed;     /* number of offchan TX frames failed */
     u_int32_t   total_invalid_macaddr_nodealloc_failcnt; /* number of invalid mac addr node alloc fail count */
-    u_int32_t			is_probsta_count;
-	unsigned char	is_probsta[200][IEEE80211_ADDR_LEN+1];
+  //  u_int32_t			is_probsta_count;
+	//unsigned char	is_probsta[200][IEEE80211_ADDR_LEN+1];
 };
 
 typedef enum _ieee80211_send_frame_type {

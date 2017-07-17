@@ -1,0 +1,28 @@
+diff --git a/arch/mips/include/asm/current.h b/arch/mips/include/asm/current.h
+new file mode 100644
+index 0000000..4c51401
+--- /dev/null
++++ b/arch/mips/include/asm/current.h
+@@ -0,0 +1 @@
++#include <asm-generic/current.h>
+diff --git a/arch/mips/include/asm/percpu.h b/arch/mips/include/asm/percpu.h
+new file mode 100644
+index 0000000..06a959d
+--- /dev/null
++++ b/arch/mips/include/asm/percpu.h
+@@ -0,0 +1 @@
++#include <asm-generic/percpu.h>
+diff --git a/arch/mips/include/asm/preempt.h b/arch/mips/include/asm/preempt.h
+new file mode 100644
+index 0000000..d0176fc
+--- /dev/null
++++ b/arch/mips/include/asm/preempt.h
+@@ -0,0 +1 @@
++#include <asm-generic/preempt.h>
+diff --git a/arch/mips/include/asm/scatterlist.h b/arch/mips/include/asm/scatterlist.h
+new file mode 100644
+index 0000000..35d786f
+--- /dev/null
++++ b/arch/mips/include/asm/scatterlist.h
+@@ -0,0 +1 @@
++#include <asm-generic/scatterlist.h>

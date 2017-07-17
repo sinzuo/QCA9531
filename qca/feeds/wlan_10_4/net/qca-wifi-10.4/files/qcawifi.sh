@@ -961,11 +961,12 @@ enable_qcawifi() {
 		config_get_bool disablecoext "$vif" disablecoext
 		[ -n "$disablecoext" ] && iwpriv "$ifname" disablecoext "${disablecoext}"
 
-         case "$htmode" in                                                                    
-                HT40)                                                                         
-                        iwpriv "$ifname" disablecoext 0                                       
-                        iwpriv "$ifname" mode 11NAHT40PLUS                                    
-                        ;;                                                                    
+
+         case "$htmode" in                                                        
+                HT40)                                                             
+                        iwpriv "$ifname" disablecoext 0                           
+                        iwpriv "$ifname" mode 11NAHT40PLUS                        
+                        ;;                                                        
                 esac
 
 
@@ -1872,14 +1873,19 @@ detect_qcawifi() {
 		found=0
 		config_foreach check_qcawifi_device wifi-device
 		[ "$found" -gt 0 ] && continue
-
+	   mode_ht=HT20
+                    
 		hwcaps=$(cat ${dev}/hwcaps)
 		case "${hwcaps}" in
 			*11bgn) mode_11=ng;;
 			*11abgn) mode_11=ng;;
 			*11an) mode_11=na;;
-			*11an/ac) mode_11=ac;;
-			*11abgn/ac) mode_11=ac;;
+			*11an/ac) mode_11=ac
+			   mode_ht=HT80
+                    ;;
+			*11abgn/ac) mode_11=ac
+			   mode_ht=HT80
+                    ;;
 		esac
 		if [ -f /sys/class/net/${dev}/nssoffload ] && [ $(cat /sys/class/net/${dev}/nssoffload) == "capable" ]; then
 			case "${mode_11}" in
@@ -1905,17 +1911,19 @@ detect_qcawifi() {
 	
 		[ $devidx -eq 1 ]&& name=5.8G
 		[ $devidx -eq 1 ]&& xindao=149
-
+		
 		cat <<EOF
 config wifi-device  wifi$devidx
 	option type	qcawifi
 	option channel	${xindao}
 	option macaddr	$(cat /sys/class/net/${dev}/address)
 	option hwmode	11${mode_11}
+	option htmode  $mode_ht
 	# REMOVE THIS LINE TO ENABLE WIFI:
 	#option disabled 1
 	option country  US
-
+	option txpower 23
+	
 config wifi-iface
 	option device	wifi$devidx
 	option network	lan

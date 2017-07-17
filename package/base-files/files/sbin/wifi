@@ -146,6 +146,14 @@ wifi_reload() {
 }
 
 wifi_detect() {
+
+                        local mtdblock=$(find_mtd_part art)
+                        local dir="/lib/firmware/ath10k/QCA988X/hw2.0"
+                        local cal_data_path="/tmp"
+
+                        dd if=${mtdblock} of=${cal_data_path}/wifi0.caldata bs=32 count=377 skip=128
+                        dd if=${mtdblock} of=${cal_data_path}/wifi1.caldata bs=32 count=377 skip=640
+
 	for driver in ${2:-$DRIVERS}; do (
 		if eval "type detect_$driver" 2>/dev/null >/dev/null; then
 			eval "detect_$driver" || echo "$driver: Detect failed" >&2

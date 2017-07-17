@@ -16,8 +16,12 @@
 #
 
 if [ "$ACTION" = "released" -a "$BUTTON" = "wps" ]; then
-	
-	if [ "$SEEN" -gt 3 ]; then
+	default_hold = 3
+	if [ -f /var/run/plchost.pid ]
+	then
+		default_hold=12
+	fi
+	if [ "$SEEN" -gt $default_hold ]; then
 		echo "" > /dev/console
 		echo "RESET TO FACTORY SETTING EVENT DETECTED" > /dev/console
 		echo "PLEASE WAIT WHILE REBOOTING THE DEVICE..." > /dev/console

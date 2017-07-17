@@ -320,7 +320,7 @@ ieee80211_send_proberesp(struct ieee80211_node *ni, u_int8_t *macaddr,
 /* Determine whether probe response needs modification towards 160 MHz width
    association WAR.
  */
-
+#if 0
 #define NUM_MAC_TABLE 200
 unsigned int maccount;
 unsigned char mactable[NUM_MAC_TABLE][7];
@@ -395,7 +395,7 @@ void write_mac_to_table(struct ieee80211vap *vap,unsigned char *addr,int rssi)
         
 
 } 
- 
+ #endif
  
 static bool
 is_assocwar160_reqd_proberesp(struct ieee80211vap *vap,
@@ -473,7 +473,7 @@ ieee80211_recv_probereq(struct ieee80211_node *ni, wbuf_t wbuf, int subtype,
         vap->iv_stats.is_rx_mgtdiscard++;   /* XXX stat */
         return -EINVAL;
     }
-	write_mac_to_table(vap ,wh->i_addr2,rs->rs_rssi);
+	//write_mac_to_table(vap ,wh->i_addr2,rs->rs_rssi);
     /* Drop mcast Probe requests if Tx buffers availability goes low */
     if ((IEEE80211_IS_MULTICAST(wh->i_addr1)) &&
             (!ic->ic_is_mode_offload(ic)) &&
