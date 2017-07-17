@@ -1,0 +1,14 @@
+./lmac/ratectrl/ath_rate_atheros.mod.c
+./lmac/dfs/ath_dfs.mod.c
+./lmac/tx99/hst_tx99.mod.c
+./lmac/spectral/ath_spectral.mod.c
+./lmac/ath_dev/ath_dev.mod.c
+./lmac/ath_pktlog/ath_pktlog.mod.c
+./smartantenna/smart_antenna.mod.c
+./qca_da/qca_da.mod.c
+./umac/umac.mod.c
+./testmodule/tm.mod.c
+./os/linux/ath_hal/ath_hal.mod.c
+./os/linux/mem/mem_manager.mod.c
+./asf/asf.mod.c
+./adf/adf.mod.c

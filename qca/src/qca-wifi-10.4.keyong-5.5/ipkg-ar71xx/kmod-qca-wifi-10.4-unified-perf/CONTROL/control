@@ -1,0 +1,10 @@
+Package: kmod-qca-wifi-10.4-unified-perf
+Version: 3.18.23+g1cd5709-dirty-1
+Depends: kernel (=3.18.23-1-cb078347b6301c14c42c7f9737755fa7), libgcc, libc, wireless-tools, librt, iproute2
+Provides: kmod-qca-wifi-10.4
+Source: qca/feeds/wlan_10_4/net/qca-wifi-10.4
+Section: QCA
+Maintainer: Qualcomm Atheros
+Architecture: ar71xx
+Installed-Size: 2017636
+Description:  QCA Wireless LAN Driver
