@@ -6,6 +6,15 @@ STOP=90
 USE_PROCD=1
 
 init_switch() {
+		
+	ifconfig eth0 down
+	ifconfig eth1 down
+	echo 0 > /proc/sys/net/bridge/bridge-nf-call-iptables
+        /sbin/2060reset
+
+	ifconfig eth0 up
+	ifconfig eth1 up
+
 	setup_switch() { return 0; }
 
 	include /lib/network
@@ -125,6 +134,14 @@ validate_switch_vlan()
 
 service_triggers()
 {
+	        ifconfig eth0 down                                                                                                                                                                                   
+        ifconfig eth1 down
+	echo 0 > /proc/sys/net/bridge/bridge-nf-call-iptables
+        /sbin/2060reset
+	
+	ifconfig eth0 up                                                                                                                                                                         
+        ifconfig eth1 up
+
 	procd_add_reload_trigger network wireless
 
 	procd_open_validate
@@ -144,6 +161,7 @@ restart() {
 	trap '' TERM
 	stop "$@"
 	start "$@"
+	wifi
 }
 
 shutdown() {
