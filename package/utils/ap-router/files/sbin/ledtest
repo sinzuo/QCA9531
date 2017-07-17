@@ -1,0 +1,19 @@
+#!/bin/sh
+
+
+
+
+if [ $1 = "on" ];then
+
+        echo  1 > /sys/class/leds/ap147:green:status/brightness 
+        echo  1 > /sys/class/leds/ap147:green:wlan-2g/brightness
+        echo  1 > /sys/class/leds/ap147:green:wan/brightness 
+
+elif [ $1 = "off" ]
+then
+
+        echo  0 > /sys/class/leds/ap147:green:status/brightness
+        echo  0 > /sys/class/leds/ap147:green:wlan-2g/brightness
+        echo  0 > /sys/class/leds/ap147:green:wan/brightness   
+fi
+

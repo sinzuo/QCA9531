@@ -1,0 +1,21 @@
+#!/bin/sh
+
+
+flag=`uci get sets.@model[0].enable`
+
+#echo "flag="$flag
+
+
+if [ "$flag" = "1" ];then
+
+	cp /sbin/network-router /etc/config/network	
+fi
+
+
+if [ "$flag" = "0" ];then
+	cp /sbin/network-ap /etc/config/network
+	/etc/init.d/dnsmasq stop
+fi
+
+
+	/etc/init.d/network restart
