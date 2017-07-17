@@ -14,10 +14,16 @@
 #  OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-if [ "$ACTION" = "pressed" -a "$BUTTON" = "wps" ]; then
+if [ "$ACTION" = "released" -a "$BUTTON" = "wps" ]; then
 	[ -r /var/run/wifi-wps-enhc-extn.conf ] && exit 0
 	echo "" > /dev/console
+
+
+if [ "$SEEN" -lt 1 ]
+then
 	echo "WPS PUSH BUTTON EVENT DETECTED" > /dev/console
+	
+	
 	for dir in /var/run/hostapd-*; do
 		[ -d "$dir" ] || continue
 		for vap_dir in $dir/ath* $dir/wlan*; do
@@ -28,4 +34,16 @@ if [ "$ACTION" = "pressed" -a "$BUTTON" = "wps" ]; then
 		fi
 		done
 	done
+
+
+
+        elif [ "$SEEN" -gt 5 ]; then
+                echo "" > /dev/console
+                echo "RESET TO FACTORY SETTING EVENT DETECTED" > /dev/console
+                echo "PLEASE WAIT WHILE REBOOTING THE DEVICE..." > /dev/console
+	         jffs2reset  -y && reboot &
+
+	fi
+
+
 fi
