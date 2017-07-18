@@ -15,7 +15,7 @@ cp /home/ayuchou/work/9531/openwrt/sh/config/qcawifi.sh.21  /home/ayuchou/work/9
 
 
 
-cp /home/ayuchou/work/9531/network  /home/ayuchou/work/9531/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/root-ar71xx/etc/config/
+cp /home/ayuchou/work/9531/openwrt/sh/config/network  /home/ayuchou/work/9531/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/root-ar71xx/etc/config/
 
 
 
