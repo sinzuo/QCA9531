@@ -1,0 +1,37 @@
+#!/bin/sh
+
+
+cp /home/ayuchou/work/atheros/network  /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/root-ar71xx/etc/config/
+
+
+/home/ayuchou/work/atheros/openwrt/staging_dir/host/bin/mksquashfs4 /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/root-ar71xx /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs -nopad -noappend -root-owned -comp xz -Xpreset 9 -Xe -Xlc 0 -Xlp 2 -Xpb 2  -b 256k -p '/dev d 755 0 0' -p '/dev/console c 600 0 0 5 1' -processors 1
+
+#rm -f /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tl-wr841n-v10-kernel.bin
+
+#cp /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/vmlinux /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tl-wr841n-v10-kernel.bin
+
+
+
+
+#/home/ayuchou/work/atheros/openwrt/staging_dir/host/bin/patch-cmdline /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tl-wr841n-v10-kernel.bin 'board=TL-WR841N-v9  console=ttyS0,115200'
+
+
+#/home/ayuchou/work/atheros/openwrt/staging_dir/host/bin/lzma e /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tl-wr841n-v10-kernel.bin -lc1 -lp2 -pb2  /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tl-wr841n-v10-kernel.bin.new
+
+
+
+
+[ -f /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tl-wr841n-v10-kernel.bin -a -f /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs ]
+
+dd if=/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs  >> /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr841n-v10-squashfs-sysupgrade.bin
+
+echo "xxx"
+
+
+/home/ayuchou/work/atheros/openwrt/staging_dir/host/bin/mktplinkfw -H 0x08410010 -W 0x1 -F 16Mlzma -N OpenWrt -V r47794 -k /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tl-wr841n-v10-kernel.bin -r /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr841n-v10-squashfs-sysupgrade.bin -o /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr841n-v10-squashfs-sysupgrade.bin.new -j -X 0x40000 -a 0x4 -s && mv /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr841n-v10-squashfs-sysupgrade.bin.new /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr841n-v10-squashfs-sysupgrade.bin || rm -f /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr841n-v10-squashfs-sysupgrade.bin
+
+
+
+cp /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr841n-v10-squashfs-sysupgrade.bin /home/ayuchou/work/atheros/openwrt/bin/ar71xx/openwrt-ar71xx-generic-tl-wr841n-v10-squashfs-sysupgrade.bin
+
+

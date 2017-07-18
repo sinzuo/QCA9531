@@ -1,0 +1,442 @@
+make[5]: Nothing to be done for `modules'.
+make[5]: Leaving directory `/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/linux-3.18.23'
+mips-openwrt-linux-uclibc-objcopy -O binary -R .reginfo -R .notes -R .note -R .comment -R .mdebug -R .note.gnu.build-id -S /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/linux-3.18.23/vmlinux /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/vmlinux
+mips-openwrt-linux-uclibc-objcopy -R .reginfo -R .notes -R .note -R .comment -R .mdebug -R .note.gnu.build-id -S /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/linux-3.18.23/vmlinux /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/vmlinux.elf
+cp -fpR /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/linux-3.18.23/vmlinux /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/vmlinux.debug
+touch /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/linux-3.18.23/.image
+make -C image compile install TARGET_BUILD=
+make[5]: Entering directory `/home/ayuchou/work/atheros/openwrt/target/linux/ar71xx/image'
+make[5]: Nothing to be done for `compile'.
+mkdir -p /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp
+gzip -9 -c /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/vmlinux > /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/vmlinux.bin.gz
+/home/ayuchou/work/atheros/openwrt/staging_dir/host/bin/lzma e /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/vmlinux -lc1 -lp2 -pb2  /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/vmlinux.bin.lzma
+
+LZMA 4.65 : Igor Pavlov : Public domain : 2009-02-03
+rm -rf /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/lzma-loader
+export MAKEFLAGS= ;make V=ss -C lzma-loader KDIR=/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic LOADER=loader-generic.elf KERNEL_CMDLINE="" LZMA_TEXT_START=0x80a00000 LOADADDR=0x80060000 LOADER_DATA="/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/vmlinux.bin.lzma" BOARD="generic" compile loader.elf
+make[6]: Entering directory `/home/ayuchou/work/atheros/openwrt/target/linux/ar71xx/image/lzma-loader'
+mkdir /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/lzma-loader
+cp -fpR ./src/* /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/lzma-loader/
+touch /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/lzma-loader/.prepared
+make -C /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/lzma-loader CROSS_COMPILE="mips-openwrt-linux-uclibc-" \
+		LZMA_TEXT_START=0x80a00000 \
+		LOADER_DATA=/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/vmlinux.bin.lzma \
+		FLASH_OFFS= \
+		FLASH_MAX= \
+		BOARD="generic" \
+		clean all
+make[7]: Entering directory `/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/lzma-loader'
+rm -f loader *.elf *.bin *.o
+mips-openwrt-linux-uclibc-gcc -D__KERNEL__ -Wall -Wstrict-prototypes -Wno-trigraphs -Os -fno-strict-aliasing -fno-common -fomit-frame-pointer -G 0 -mno-abicalls -fno-pic -ffunction-sections -pipe -mlong-calls -fno-common -ffreestanding -fhonour-copts -mabi=32 -march=mips32r2 -Wa,-32 -Wa,-march=mips32r2 -Wa,-mips32r2 -Wa,--trap -D_LZMA_PROB32 -DLZMA_WRAPPER=1 -DLOADADDR=0x80060000 -DCONFIG_BOARD_GENERIC -D__ASSEMBLY__ -c -o head.o head.S
+mips-openwrt-linux-uclibc-gcc -D__KERNEL__ -Wall -Wstrict-prototypes -Wno-trigraphs -Os -fno-strict-aliasing -fno-common -fomit-frame-pointer -G 0 -mno-abicalls -fno-pic -ffunction-sections -pipe -mlong-calls -fno-common -ffreestanding -fhonour-copts -mabi=32 -march=mips32r2 -Wa,-32 -Wa,-march=mips32r2 -Wa,-mips32r2 -Wa,--trap -D_LZMA_PROB32 -DLZMA_WRAPPER=1 -DLOADADDR=0x80060000 -DCONFIG_BOARD_GENERIC -c -o loader.o loader.c
+mips-openwrt-linux-uclibc-gcc -D__KERNEL__ -Wall -Wstrict-prototypes -Wno-trigraphs -Os -fno-strict-aliasing -fno-common -fomit-frame-pointer -G 0 -mno-abicalls -fno-pic -ffunction-sections -pipe -mlong-calls -fno-common -ffreestanding -fhonour-copts -mabi=32 -march=mips32r2 -Wa,-32 -Wa,-march=mips32r2 -Wa,-mips32r2 -Wa,--trap -D_LZMA_PROB32 -DLZMA_WRAPPER=1 -DLOADADDR=0x80060000 -DCONFIG_BOARD_GENERIC -c -o cache.o cache.c
+mips-openwrt-linux-uclibc-gcc -D__KERNEL__ -Wall -Wstrict-prototypes -Wno-trigraphs -Os -fno-strict-aliasing -fno-common -fomit-frame-pointer -G 0 -mno-abicalls -fno-pic -ffunction-sections -pipe -mlong-calls -fno-common -ffreestanding -fhonour-copts -mabi=32 -march=mips32r2 -Wa,-32 -Wa,-march=mips32r2 -Wa,-mips32r2 -Wa,--trap -D_LZMA_PROB32 -DLZMA_WRAPPER=1 -DLOADADDR=0x80060000 -DCONFIG_BOARD_GENERIC -c -o board.o board.c
+mips-openwrt-linux-uclibc-gcc -D__KERNEL__ -Wall -Wstrict-prototypes -Wno-trigraphs -Os -fno-strict-aliasing -fno-common -fomit-frame-pointer -G 0 -mno-abicalls -fno-pic -ffunction-sections -pipe -mlong-calls -fno-common -ffreestanding -fhonour-copts -mabi=32 -march=mips32r2 -Wa,-32 -Wa,-march=mips32r2 -Wa,-mips32r2 -Wa,--trap -D_LZMA_PROB32 -DLZMA_WRAPPER=1 -DLOADADDR=0x80060000 -DCONFIG_BOARD_GENERIC -c -o printf.o printf.c
+mips-openwrt-linux-uclibc-gcc -D__KERNEL__ -Wall -Wstrict-prototypes -Wno-trigraphs -Os -fno-strict-aliasing -fno-common -fomit-frame-pointer -G 0 -mno-abicalls -fno-pic -ffunction-sections -pipe -mlong-calls -fno-common -ffreestanding -fhonour-copts -mabi=32 -march=mips32r2 -Wa,-32 -Wa,-march=mips32r2 -Wa,-mips32r2 -Wa,--trap -D_LZMA_PROB32 -DLZMA_WRAPPER=1 -DLOADADDR=0x80060000 -DCONFIG_BOARD_GENERIC -c -o LzmaDecode.o LzmaDecode.c
+mips-openwrt-linux-uclibc-ld -r -b binary --oformat elf32-tradbigmips -T lzma-data.lds -o data.o /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/vmlinux.bin.lzma
+mips-openwrt-linux-uclibc-ld -static --gc-sections -no-warn-mismatch -e startup -T loader.lds -Ttext 0x80a00000 -o loader head.o loader.o cache.o board.o printf.o LzmaDecode.o data.o
+mips-openwrt-linux-uclibc-objcopy -O binary -R .reginfo -R .note -R .comment -R .mdebug -S loader loader.bin
+mips-openwrt-linux-uclibc-ld -r -b binary --oformat elf32-tradbigmips -o loader2.o loader.bin
+mips-openwrt-linux-uclibc-ld -e startup -T loader2.lds -Ttext 0x80060000 -o loader.elf loader2.o
+make[7]: Leaving directory `/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/lzma-loader'
+cp -fpR /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/lzma-loader/loader.elf /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/loader-generic.elf
+make[6]: Leaving directory `/home/ayuchou/work/atheros/openwrt/target/linux/ar71xx/image/lzma-loader'
+cp -fpR /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/loader-generic.elf /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/loader-generic.elf
+cp: '/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/loader-generic.elf' and '/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/loader-generic.elf' are the same file
+make[5]: [image_prepare] Error 1 (ignored)
+rm -rf /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/lzma-loader
+export MAKEFLAGS= ;make V=ss -C lzma-loader KDIR=/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic LOADER=loader-tl-wr841nd-v1.5.gz KERNEL_CMDLINE="board=TL-WR841N-v1.5 console=ttyS0,115200" LZMA_TEXT_START=0x80a00000 LOADADDR=0x80060000 BOARD="tl-wr841nd-v1.5" FLASH_OFFS=0x22000 FLASH_MAX=0 compile loader.gz
+make[6]: Entering directory `/home/ayuchou/work/atheros/openwrt/target/linux/ar71xx/image/lzma-loader'
+mkdir /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/lzma-loader
+cp -fpR ./src/* /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/lzma-loader/
+touch /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/lzma-loader/.prepared
+make -C /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/lzma-loader CROSS_COMPILE="mips-openwrt-linux-uclibc-" \
+		LZMA_TEXT_START=0x80a00000 \
+		LOADER_DATA= \
+		FLASH_OFFS=0x22000 \
+		FLASH_MAX=0 \
+		BOARD="tl-wr841nd-v1.5" \
+		clean all
+make[7]: Entering directory `/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/lzma-loader'
+rm -f loader *.elf *.bin *.o
+mips-openwrt-linux-uclibc-gcc -D__KERNEL__ -Wall -Wstrict-prototypes -Wno-trigraphs -Os -fno-strict-aliasing -fno-common -fomit-frame-pointer -G 0 -mno-abicalls -fno-pic -ffunction-sections -pipe -mlong-calls -fno-common -ffreestanding -fhonour-copts -mabi=32 -march=mips32r2 -Wa,-32 -Wa,-march=mips32r2 -Wa,-mips32r2 -Wa,--trap -D_LZMA_PROB32 -DCONFIG_KERNEL_CMDLINE='"board=TL-WR841N-v1.5 console=ttyS0,115200"' -DCONFIG_FLASH_OFFS=0x22000 -DCONFIG_FLASH_MAX=0 -DCONFIG_BOARD_TL_WR841ND_V1.5 -D__ASSEMBLY__ -c -o head.o head.S
+<command-line>:0:27: warning: missing whitespace after the macro name [enabled by default]
+mips-openwrt-linux-uclibc-gcc -D__KERNEL__ -Wall -Wstrict-prototypes -Wno-trigraphs -Os -fno-strict-aliasing -fno-common -fomit-frame-pointer -G 0 -mno-abicalls -fno-pic -ffunction-sections -pipe -mlong-calls -fno-common -ffreestanding -fhonour-copts -mabi=32 -march=mips32r2 -Wa,-32 -Wa,-march=mips32r2 -Wa,-mips32r2 -Wa,--trap -D_LZMA_PROB32 -DCONFIG_KERNEL_CMDLINE='"board=TL-WR841N-v1.5 console=ttyS0,115200"' -DCONFIG_FLASH_OFFS=0x22000 -DCONFIG_FLASH_MAX=0 -DCONFIG_BOARD_TL_WR841ND_V1.5 -c -o loader.o loader.c
+<command-line>:0:27: warning: missing whitespace after the macro name [enabled by default]
+mips-openwrt-linux-uclibc-gcc -D__KERNEL__ -Wall -Wstrict-prototypes -Wno-trigraphs -Os -fno-strict-aliasing -fno-common -fomit-frame-pointer -G 0 -mno-abicalls -fno-pic -ffunction-sections -pipe -mlong-calls -fno-common -ffreestanding -fhonour-copts -mabi=32 -march=mips32r2 -Wa,-32 -Wa,-march=mips32r2 -Wa,-mips32r2 -Wa,--trap -D_LZMA_PROB32 -DCONFIG_KERNEL_CMDLINE='"board=TL-WR841N-v1.5 console=ttyS0,115200"' -DCONFIG_FLASH_OFFS=0x22000 -DCONFIG_FLASH_MAX=0 -DCONFIG_BOARD_TL_WR841ND_V1.5 -c -o cache.o cache.c
+<command-line>:0:27: warning: missing whitespace after the macro name [enabled by default]
+mips-openwrt-linux-uclibc-gcc -D__KERNEL__ -Wall -Wstrict-prototypes -Wno-trigraphs -Os -fno-strict-aliasing -fno-common -fomit-frame-pointer -G 0 -mno-abicalls -fno-pic -ffunction-sections -pipe -mlong-calls -fno-common -ffreestanding -fhonour-copts -mabi=32 -march=mips32r2 -Wa,-32 -Wa,-march=mips32r2 -Wa,-mips32r2 -Wa,--trap -D_LZMA_PROB32 -DCONFIG_KERNEL_CMDLINE='"board=TL-WR841N-v1.5 console=ttyS0,115200"' -DCONFIG_FLASH_OFFS=0x22000 -DCONFIG_FLASH_MAX=0 -DCONFIG_BOARD_TL_WR841ND_V1.5 -c -o board.o board.c
+<command-line>:0:27: warning: missing whitespace after the macro name [enabled by default]
+mips-openwrt-linux-uclibc-gcc -D__KERNEL__ -Wall -Wstrict-prototypes -Wno-trigraphs -Os -fno-strict-aliasing -fno-common -fomit-frame-pointer -G 0 -mno-abicalls -fno-pic -ffunction-sections -pipe -mlong-calls -fno-common -ffreestanding -fhonour-copts -mabi=32 -march=mips32r2 -Wa,-32 -Wa,-march=mips32r2 -Wa,-mips32r2 -Wa,--trap -D_LZMA_PROB32 -DCONFIG_KERNEL_CMDLINE='"board=TL-WR841N-v1.5 console=ttyS0,115200"' -DCONFIG_FLASH_OFFS=0x22000 -DCONFIG_FLASH_MAX=0 -DCONFIG_BOARD_TL_WR841ND_V1.5 -c -o printf.o printf.c
+<command-line>:0:27: warning: missing whitespace after the macro name [enabled by default]
+mips-openwrt-linux-uclibc-gcc -D__KERNEL__ -Wall -Wstrict-prototypes -Wno-trigraphs -Os -fno-strict-aliasing -fno-common -fomit-frame-pointer -G 0 -mno-abicalls -fno-pic -ffunction-sections -pipe -mlong-calls -fno-common -ffreestanding -fhonour-copts -mabi=32 -march=mips32r2 -Wa,-32 -Wa,-march=mips32r2 -Wa,-mips32r2 -Wa,--trap -D_LZMA_PROB32 -DCONFIG_KERNEL_CMDLINE='"board=TL-WR841N-v1.5 console=ttyS0,115200"' -DCONFIG_FLASH_OFFS=0x22000 -DCONFIG_FLASH_MAX=0 -DCONFIG_BOARD_TL_WR841ND_V1.5 -c -o LzmaDecode.o LzmaDecode.c
+<command-line>:0:27: warning: missing whitespace after the macro name [enabled by default]
+mips-openwrt-linux-uclibc-ld -static --gc-sections -no-warn-mismatch -e startup -T loader.lds -Ttext 0x80a00000 -o loader head.o loader.o cache.o board.o printf.o LzmaDecode.o
+mips-openwrt-linux-uclibc-objcopy -O binary -R .reginfo -R .note -R .comment -R .mdebug -S loader loader.bin
+mips-openwrt-linux-uclibc-ld -r -b binary --oformat elf32-tradbigmips -o loader2.o loader.bin
+mips-openwrt-linux-uclibc-ld -e startup -T loader2.lds -Ttext 0x80060000 -o loader.elf loader2.o
+make[7]: Leaving directory `/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/lzma-loader'
+gzip -nc9 /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/lzma-loader/loader.bin > /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/loader-tl-wr841nd-v1.5.gz
+make[6]: Leaving directory `/home/ayuchou/work/atheros/openwrt/target/linux/ar71xx/image/lzma-loader'
+rm -rf /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/lzma-loader
+export MAKEFLAGS= ;make V=ss -C lzma-loader KDIR=/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic LOADER=loader-tl-wr841nd-v3.gz KERNEL_CMDLINE="board=TL-WR941ND console=ttyS0,115200" LZMA_TEXT_START=0x80a00000 LOADADDR=0x80060000 BOARD="tl-wr841nd-v3" FLASH_OFFS=0x22000 FLASH_MAX=0 compile loader.gz
+make[6]: Entering directory `/home/ayuchou/work/atheros/openwrt/target/linux/ar71xx/image/lzma-loader'
+mkdir /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/lzma-loader
+cp -fpR ./src/* /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/lzma-loader/
+touch /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/lzma-loader/.prepared
+make -C /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/lzma-loader CROSS_COMPILE="mips-openwrt-linux-uclibc-" \
+		LZMA_TEXT_START=0x80a00000 \
+		LOADER_DATA= \
+		FLASH_OFFS=0x22000 \
+		FLASH_MAX=0 \
+		BOARD="tl-wr841nd-v3" \
+		clean all
+make[7]: Entering directory `/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/lzma-loader'
+rm -f loader *.elf *.bin *.o
+mips-openwrt-linux-uclibc-gcc -D__KERNEL__ -Wall -Wstrict-prototypes -Wno-trigraphs -Os -fno-strict-aliasing -fno-common -fomit-frame-pointer -G 0 -mno-abicalls -fno-pic -ffunction-sections -pipe -mlong-calls -fno-common -ffreestanding -fhonour-copts -mabi=32 -march=mips32r2 -Wa,-32 -Wa,-march=mips32r2 -Wa,-mips32r2 -Wa,--trap -D_LZMA_PROB32 -DCONFIG_KERNEL_CMDLINE='"board=TL-WR941ND console=ttyS0,115200"' -DCONFIG_FLASH_OFFS=0x22000 -DCONFIG_FLASH_MAX=0 -DCONFIG_BOARD_TL_WR841ND_V3 -D__ASSEMBLY__ -c -o head.o head.S
+mips-openwrt-linux-uclibc-gcc -D__KERNEL__ -Wall -Wstrict-prototypes -Wno-trigraphs -Os -fno-strict-aliasing -fno-common -fomit-frame-pointer -G 0 -mno-abicalls -fno-pic -ffunction-sections -pipe -mlong-calls -fno-common -ffreestanding -fhonour-copts -mabi=32 -march=mips32r2 -Wa,-32 -Wa,-march=mips32r2 -Wa,-mips32r2 -Wa,--trap -D_LZMA_PROB32 -DCONFIG_KERNEL_CMDLINE='"board=TL-WR941ND console=ttyS0,115200"' -DCONFIG_FLASH_OFFS=0x22000 -DCONFIG_FLASH_MAX=0 -DCONFIG_BOARD_TL_WR841ND_V3 -c -o loader.o loader.c
+mips-openwrt-linux-uclibc-gcc -D__KERNEL__ -Wall -Wstrict-prototypes -Wno-trigraphs -Os -fno-strict-aliasing -fno-common -fomit-frame-pointer -G 0 -mno-abicalls -fno-pic -ffunction-sections -pipe -mlong-calls -fno-common -ffreestanding -fhonour-copts -mabi=32 -march=mips32r2 -Wa,-32 -Wa,-march=mips32r2 -Wa,-mips32r2 -Wa,--trap -D_LZMA_PROB32 -DCONFIG_KERNEL_CMDLINE='"board=TL-WR941ND console=ttyS0,115200"' -DCONFIG_FLASH_OFFS=0x22000 -DCONFIG_FLASH_MAX=0 -DCONFIG_BOARD_TL_WR841ND_V3 -c -o cache.o cache.c
+mips-openwrt-linux-uclibc-gcc -D__KERNEL__ -Wall -Wstrict-prototypes -Wno-trigraphs -Os -fno-strict-aliasing -fno-common -fomit-frame-pointer -G 0 -mno-abicalls -fno-pic -ffunction-sections -pipe -mlong-calls -fno-common -ffreestanding -fhonour-copts -mabi=32 -march=mips32r2 -Wa,-32 -Wa,-march=mips32r2 -Wa,-mips32r2 -Wa,--trap -D_LZMA_PROB32 -DCONFIG_KERNEL_CMDLINE='"board=TL-WR941ND console=ttyS0,115200"' -DCONFIG_FLASH_OFFS=0x22000 -DCONFIG_FLASH_MAX=0 -DCONFIG_BOARD_TL_WR841ND_V3 -c -o board.o board.c
+mips-openwrt-linux-uclibc-gcc -D__KERNEL__ -Wall -Wstrict-prototypes -Wno-trigraphs -Os -fno-strict-aliasing -fno-common -fomit-frame-pointer -G 0 -mno-abicalls -fno-pic -ffunction-sections -pipe -mlong-calls -fno-common -ffreestanding -fhonour-copts -mabi=32 -march=mips32r2 -Wa,-32 -Wa,-march=mips32r2 -Wa,-mips32r2 -Wa,--trap -D_LZMA_PROB32 -DCONFIG_KERNEL_CMDLINE='"board=TL-WR941ND console=ttyS0,115200"' -DCONFIG_FLASH_OFFS=0x22000 -DCONFIG_FLASH_MAX=0 -DCONFIG_BOARD_TL_WR841ND_V3 -c -o printf.o printf.c
+mips-openwrt-linux-uclibc-gcc -D__KERNEL__ -Wall -Wstrict-prototypes -Wno-trigraphs -Os -fno-strict-aliasing -fno-common -fomit-frame-pointer -G 0 -mno-abicalls -fno-pic -ffunction-sections -pipe -mlong-calls -fno-common -ffreestanding -fhonour-copts -mabi=32 -march=mips32r2 -Wa,-32 -Wa,-march=mips32r2 -Wa,-mips32r2 -Wa,--trap -D_LZMA_PROB32 -DCONFIG_KERNEL_CMDLINE='"board=TL-WR941ND console=ttyS0,115200"' -DCONFIG_FLASH_OFFS=0x22000 -DCONFIG_FLASH_MAX=0 -DCONFIG_BOARD_TL_WR841ND_V3 -c -o LzmaDecode.o LzmaDecode.c
+mips-openwrt-linux-uclibc-ld -static --gc-sections -no-warn-mismatch -e startup -T loader.lds -Ttext 0x80a00000 -o loader head.o loader.o cache.o board.o printf.o LzmaDecode.o
+mips-openwrt-linux-uclibc-objcopy -O binary -R .reginfo -R .note -R .comment -R .mdebug -S loader loader.bin
+mips-openwrt-linux-uclibc-ld -r -b binary --oformat elf32-tradbigmips -o loader2.o loader.bin
+mips-openwrt-linux-uclibc-ld -e startup -T loader2.lds -Ttext 0x80060000 -o loader.elf loader2.o
+make[7]: Leaving directory `/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/lzma-loader'
+gzip -nc9 /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/lzma-loader/loader.bin > /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/loader-tl-wr841nd-v3.gz
+make[6]: Leaving directory `/home/ayuchou/work/atheros/openwrt/target/linux/ar71xx/image/lzma-loader'
+rm -rf /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/lzma-loader
+export MAKEFLAGS= ;make V=ss -C lzma-loader KDIR=/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic LOADER=loader-tl-wr841nd-v5.gz KERNEL_CMDLINE="board=TL-WR741ND console=ttyS0,115200" LZMA_TEXT_START=0x80a00000 LOADADDR=0x80060000 BOARD="tl-wr841nd-v5" FLASH_OFFS=0x22000 FLASH_MAX=0 compile loader.gz
+make[6]: Entering directory `/home/ayuchou/work/atheros/openwrt/target/linux/ar71xx/image/lzma-loader'
+mkdir /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/lzma-loader
+cp -fpR ./src/* /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/lzma-loader/
+touch /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/lzma-loader/.prepared
+make -C /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/lzma-loader CROSS_COMPILE="mips-openwrt-linux-uclibc-" \
+		LZMA_TEXT_START=0x80a00000 \
+		LOADER_DATA= \
+		FLASH_OFFS=0x22000 \
+		FLASH_MAX=0 \
+		BOARD="tl-wr841nd-v5" \
+		clean all
+make[7]: Entering directory `/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/lzma-loader'
+rm -f loader *.elf *.bin *.o
+mips-openwrt-linux-uclibc-gcc -D__KERNEL__ -Wall -Wstrict-prototypes -Wno-trigraphs -Os -fno-strict-aliasing -fno-common -fomit-frame-pointer -G 0 -mno-abicalls -fno-pic -ffunction-sections -pipe -mlong-calls -fno-common -ffreestanding -fhonour-copts -mabi=32 -march=mips32r2 -Wa,-32 -Wa,-march=mips32r2 -Wa,-mips32r2 -Wa,--trap -D_LZMA_PROB32 -DCONFIG_KERNEL_CMDLINE='"board=TL-WR741ND console=ttyS0,115200"' -DCONFIG_FLASH_OFFS=0x22000 -DCONFIG_FLASH_MAX=0 -DCONFIG_BOARD_TL_WR841ND_V5 -D__ASSEMBLY__ -c -o head.o head.S
+mips-openwrt-linux-uclibc-gcc -D__KERNEL__ -Wall -Wstrict-prototypes -Wno-trigraphs -Os -fno-strict-aliasing -fno-common -fomit-frame-pointer -G 0 -mno-abicalls -fno-pic -ffunction-sections -pipe -mlong-calls -fno-common -ffreestanding -fhonour-copts -mabi=32 -march=mips32r2 -Wa,-32 -Wa,-march=mips32r2 -Wa,-mips32r2 -Wa,--trap -D_LZMA_PROB32 -DCONFIG_KERNEL_CMDLINE='"board=TL-WR741ND console=ttyS0,115200"' -DCONFIG_FLASH_OFFS=0x22000 -DCONFIG_FLASH_MAX=0 -DCONFIG_BOARD_TL_WR841ND_V5 -c -o loader.o loader.c
+mips-openwrt-linux-uclibc-gcc -D__KERNEL__ -Wall -Wstrict-prototypes -Wno-trigraphs -Os -fno-strict-aliasing -fno-common -fomit-frame-pointer -G 0 -mno-abicalls -fno-pic -ffunction-sections -pipe -mlong-calls -fno-common -ffreestanding -fhonour-copts -mabi=32 -march=mips32r2 -Wa,-32 -Wa,-march=mips32r2 -Wa,-mips32r2 -Wa,--trap -D_LZMA_PROB32 -DCONFIG_KERNEL_CMDLINE='"board=TL-WR741ND console=ttyS0,115200"' -DCONFIG_FLASH_OFFS=0x22000 -DCONFIG_FLASH_MAX=0 -DCONFIG_BOARD_TL_WR841ND_V5 -c -o cache.o cache.c
+mips-openwrt-linux-uclibc-gcc -D__KERNEL__ -Wall -Wstrict-prototypes -Wno-trigraphs -Os -fno-strict-aliasing -fno-common -fomit-frame-pointer -G 0 -mno-abicalls -fno-pic -ffunction-sections -pipe -mlong-calls -fno-common -ffreestanding -fhonour-copts -mabi=32 -march=mips32r2 -Wa,-32 -Wa,-march=mips32r2 -Wa,-mips32r2 -Wa,--trap -D_LZMA_PROB32 -DCONFIG_KERNEL_CMDLINE='"board=TL-WR741ND console=ttyS0,115200"' -DCONFIG_FLASH_OFFS=0x22000 -DCONFIG_FLASH_MAX=0 -DCONFIG_BOARD_TL_WR841ND_V5 -c -o board.o board.c
+mips-openwrt-linux-uclibc-gcc -D__KERNEL__ -Wall -Wstrict-prototypes -Wno-trigraphs -Os -fno-strict-aliasing -fno-common -fomit-frame-pointer -G 0 -mno-abicalls -fno-pic -ffunction-sections -pipe -mlong-calls -fno-common -ffreestanding -fhonour-copts -mabi=32 -march=mips32r2 -Wa,-32 -Wa,-march=mips32r2 -Wa,-mips32r2 -Wa,--trap -D_LZMA_PROB32 -DCONFIG_KERNEL_CMDLINE='"board=TL-WR741ND console=ttyS0,115200"' -DCONFIG_FLASH_OFFS=0x22000 -DCONFIG_FLASH_MAX=0 -DCONFIG_BOARD_TL_WR841ND_V5 -c -o printf.o printf.c
+mips-openwrt-linux-uclibc-gcc -D__KERNEL__ -Wall -Wstrict-prototypes -Wno-trigraphs -Os -fno-strict-aliasing -fno-common -fomit-frame-pointer -G 0 -mno-abicalls -fno-pic -ffunction-sections -pipe -mlong-calls -fno-common -ffreestanding -fhonour-copts -mabi=32 -march=mips32r2 -Wa,-32 -Wa,-march=mips32r2 -Wa,-mips32r2 -Wa,--trap -D_LZMA_PROB32 -DCONFIG_KERNEL_CMDLINE='"board=TL-WR741ND console=ttyS0,115200"' -DCONFIG_FLASH_OFFS=0x22000 -DCONFIG_FLASH_MAX=0 -DCONFIG_BOARD_TL_WR841ND_V5 -c -o LzmaDecode.o LzmaDecode.c
+mips-openwrt-linux-uclibc-ld -static --gc-sections -no-warn-mismatch -e startup -T loader.lds -Ttext 0x80a00000 -o loader head.o loader.o cache.o board.o printf.o LzmaDecode.o
+mips-openwrt-linux-uclibc-objcopy -O binary -R .reginfo -R .note -R .comment -R .mdebug -S loader loader.bin
+mips-openwrt-linux-uclibc-ld -r -b binary --oformat elf32-tradbigmips -o loader2.o loader.bin
+mips-openwrt-linux-uclibc-ld -e startup -T loader2.lds -Ttext 0x80060000 -o loader.elf loader2.o
+make[7]: Leaving directory `/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/lzma-loader'
+gzip -nc9 /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/lzma-loader/loader.bin > /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/loader-tl-wr841nd-v5.gz
+make[6]: Leaving directory `/home/ayuchou/work/atheros/openwrt/target/linux/ar71xx/image/lzma-loader'
+rm -rf /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/lzma-loader
+export MAKEFLAGS= ;make V=ss -C lzma-loader KDIR=/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic LOADER=loader-tl-wr841nd-v7.gz KERNEL_CMDLINE="board=TL-WR841N-v7 console=ttyS0,115200" LZMA_TEXT_START=0x80a00000 LOADADDR=0x80060000 BOARD="tl-wr841nd-v7" FLASH_OFFS=0x22000 FLASH_MAX=0 compile loader.gz
+make[6]: Entering directory `/home/ayuchou/work/atheros/openwrt/target/linux/ar71xx/image/lzma-loader'
+mkdir /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/lzma-loader
+cp -fpR ./src/* /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/lzma-loader/
+touch /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/lzma-loader/.prepared
+make -C /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/lzma-loader CROSS_COMPILE="mips-openwrt-linux-uclibc-" \
+		LZMA_TEXT_START=0x80a00000 \
+		LOADER_DATA= \
+		FLASH_OFFS=0x22000 \
+		FLASH_MAX=0 \
+		BOARD="tl-wr841nd-v7" \
+		clean all
+make[7]: Entering directory `/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/lzma-loader'
+rm -f loader *.elf *.bin *.o
+mips-openwrt-linux-uclibc-gcc -D__KERNEL__ -Wall -Wstrict-prototypes -Wno-trigraphs -Os -fno-strict-aliasing -fno-common -fomit-frame-pointer -G 0 -mno-abicalls -fno-pic -ffunction-sections -pipe -mlong-calls -fno-common -ffreestanding -fhonour-copts -mabi=32 -march=mips32r2 -Wa,-32 -Wa,-march=mips32r2 -Wa,-mips32r2 -Wa,--trap -D_LZMA_PROB32 -DCONFIG_KERNEL_CMDLINE='"board=TL-WR841N-v7 console=ttyS0,115200"' -DCONFIG_FLASH_OFFS=0x22000 -DCONFIG_FLASH_MAX=0 -DCONFIG_BOARD_TL_WR841ND_V7 -D__ASSEMBLY__ -c -o head.o head.S
+mips-openwrt-linux-uclibc-gcc -D__KERNEL__ -Wall -Wstrict-prototypes -Wno-trigraphs -Os -fno-strict-aliasing -fno-common -fomit-frame-pointer -G 0 -mno-abicalls -fno-pic -ffunction-sections -pipe -mlong-calls -fno-common -ffreestanding -fhonour-copts -mabi=32 -march=mips32r2 -Wa,-32 -Wa,-march=mips32r2 -Wa,-mips32r2 -Wa,--trap -D_LZMA_PROB32 -DCONFIG_KERNEL_CMDLINE='"board=TL-WR841N-v7 console=ttyS0,115200"' -DCONFIG_FLASH_OFFS=0x22000 -DCONFIG_FLASH_MAX=0 -DCONFIG_BOARD_TL_WR841ND_V7 -c -o loader.o loader.c
+mips-openwrt-linux-uclibc-gcc -D__KERNEL__ -Wall -Wstrict-prototypes -Wno-trigraphs -Os -fno-strict-aliasing -fno-common -fomit-frame-pointer -G 0 -mno-abicalls -fno-pic -ffunction-sections -pipe -mlong-calls -fno-common -ffreestanding -fhonour-copts -mabi=32 -march=mips32r2 -Wa,-32 -Wa,-march=mips32r2 -Wa,-mips32r2 -Wa,--trap -D_LZMA_PROB32 -DCONFIG_KERNEL_CMDLINE='"board=TL-WR841N-v7 console=ttyS0,115200"' -DCONFIG_FLASH_OFFS=0x22000 -DCONFIG_FLASH_MAX=0 -DCONFIG_BOARD_TL_WR841ND_V7 -c -o cache.o cache.c
+mips-openwrt-linux-uclibc-gcc -D__KERNEL__ -Wall -Wstrict-prototypes -Wno-trigraphs -Os -fno-strict-aliasing -fno-common -fomit-frame-pointer -G 0 -mno-abicalls -fno-pic -ffunction-sections -pipe -mlong-calls -fno-common -ffreestanding -fhonour-copts -mabi=32 -march=mips32r2 -Wa,-32 -Wa,-march=mips32r2 -Wa,-mips32r2 -Wa,--trap -D_LZMA_PROB32 -DCONFIG_KERNEL_CMDLINE='"board=TL-WR841N-v7 console=ttyS0,115200"' -DCONFIG_FLASH_OFFS=0x22000 -DCONFIG_FLASH_MAX=0 -DCONFIG_BOARD_TL_WR841ND_V7 -c -o board.o board.c
+mips-openwrt-linux-uclibc-gcc -D__KERNEL__ -Wall -Wstrict-prototypes -Wno-trigraphs -Os -fno-strict-aliasing -fno-common -fomit-frame-pointer -G 0 -mno-abicalls -fno-pic -ffunction-sections -pipe -mlong-calls -fno-common -ffreestanding -fhonour-copts -mabi=32 -march=mips32r2 -Wa,-32 -Wa,-march=mips32r2 -Wa,-mips32r2 -Wa,--trap -D_LZMA_PROB32 -DCONFIG_KERNEL_CMDLINE='"board=TL-WR841N-v7 console=ttyS0,115200"' -DCONFIG_FLASH_OFFS=0x22000 -DCONFIG_FLASH_MAX=0 -DCONFIG_BOARD_TL_WR841ND_V7 -c -o printf.o printf.c
+mips-openwrt-linux-uclibc-gcc -D__KERNEL__ -Wall -Wstrict-prototypes -Wno-trigraphs -Os -fno-strict-aliasing -fno-common -fomit-frame-pointer -G 0 -mno-abicalls -fno-pic -ffunction-sections -pipe -mlong-calls -fno-common -ffreestanding -fhonour-copts -mabi=32 -march=mips32r2 -Wa,-32 -Wa,-march=mips32r2 -Wa,-mips32r2 -Wa,--trap -D_LZMA_PROB32 -DCONFIG_KERNEL_CMDLINE='"board=TL-WR841N-v7 console=ttyS0,115200"' -DCONFIG_FLASH_OFFS=0x22000 -DCONFIG_FLASH_MAX=0 -DCONFIG_BOARD_TL_WR841ND_V7 -c -o LzmaDecode.o LzmaDecode.c
+mips-openwrt-linux-uclibc-ld -static --gc-sections -no-warn-mismatch -e startup -T loader.lds -Ttext 0x80a00000 -o loader head.o loader.o cache.o board.o printf.o LzmaDecode.o
+mips-openwrt-linux-uclibc-objcopy -O binary -R .reginfo -R .note -R .comment -R .mdebug -S loader loader.bin
+mips-openwrt-linux-uclibc-ld -r -b binary --oformat elf32-tradbigmips -o loader2.o loader.bin
+mips-openwrt-linux-uclibc-ld -e startup -T loader2.lds -Ttext 0x80060000 -o loader.elf loader2.o
+make[7]: Leaving directory `/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/lzma-loader'
+gzip -nc9 /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/lzma-loader/loader.bin > /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/loader-tl-wr841nd-v7.gz
+make[6]: Leaving directory `/home/ayuchou/work/atheros/openwrt/target/linux/ar71xx/image/lzma-loader'
+# Use symbolic permissions to avoid clobbering SUID/SGID/sticky bits
+find /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/root-ar71xx -type f -not -perm /0100 -not -name 'ssh_host*' -not -name 'shadow' -print0 | xargs -r -0 chmod u+rw,g+r,o+r
+find /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/root-ar71xx -type f -perm /0100 -print0 | xargs -r -0 chmod u+rwx,g+rx,o+rx
+find /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/root-ar71xx -type d -print0 | xargs -r -0 chmod u+rwx,g+rx,o+rx
+install -d -m0755 /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/root-ar71xx/tmp /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/root-ar71xx/overlay
+chmod 1777 /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/root-ar71xx/tmp
+cp /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/vmlinux.elf /home/ayuchou/work/atheros/openwrt/bin/ar71xx/openwrt-ar71xx-generic-vmlinux.elf
+cp /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/vmlinux /home/ayuchou/work/atheros/openwrt/bin/ar71xx/openwrt-ar71xx-generic-vmlinux.bin
+dd if=/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/vmlinux.bin.lzma of=/home/ayuchou/work/atheros/openwrt/bin/ar71xx/openwrt-ar71xx-generic-vmlinux.lzma bs=65536 conv=sync
+17+1 records in
+18+0 records out
+1179648 bytes (1.2 MB) copied, 0.000925841 s, 1.3 GB/s
+dd if=/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/vmlinux.bin.gz of=/home/ayuchou/work/atheros/openwrt/bin/ar71xx/openwrt-ar71xx-generic-vmlinux.gz bs=65536 conv=sync
+24+1 records in
+25+0 records out
+1638400 bytes (1.6 MB) copied, 0.00135007 s, 1.2 GB/s
+mkimage -A mips -O linux -T kernel -a 0x80060000 -C gzip  -e 0x80060000 -n 'MIPS OpenWrt Linux-3.18.23' -d /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/vmlinux.bin.gz /home/ayuchou/work/atheros/openwrt/bin/ar71xx/openwrt-ar71xx-generic-uImage-gzip.bin
+Image Name:   MIPS OpenWrt Linux-3.18.23
+Created:      Sat Apr  1 15:53:07 2017
+Image Type:   MIPS Linux Kernel Image (gzip compressed)
+Data Size:    1616432 Bytes = 1578.55 kB = 1.54 MB
+Load Address: 80060000
+Entry Point:  80060000
+mkimage -A mips -O linux -T kernel -a 0x80060000 -C lzma  -e 0x80060000 -n 'MIPS OpenWrt Linux-3.18.23' -d /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/vmlinux.bin.lzma /home/ayuchou/work/atheros/openwrt/bin/ar71xx/openwrt-ar71xx-generic-uImage-lzma.bin
+Image Name:   MIPS OpenWrt Linux-3.18.23
+Created:      Sat Apr  1 15:53:07 2017
+Image Type:   MIPS Linux Kernel Image (lzma compressed)
+Data Size:    1166298 Bytes = 1138.96 kB = 1.11 MB
+Load Address: 80060000
+Entry Point:  80060000
+cp /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/loader-generic.elf /home/ayuchou/work/atheros/openwrt/bin/ar71xx/openwrt-ar71xx-generic-vmlinux-lzma.elf
+mkdir -p /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp
+rm -f /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tl-wr841n-v8-kernel.bin
+cp /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/vmlinux /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tl-wr841n-v8-kernel.bin
+/home/ayuchou/work/atheros/openwrt/staging_dir/host/bin/patch-cmdline /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tl-wr841n-v8-kernel.bin 'board=TL-WR841N-v8  console=ttyS0,115200'
+/home/ayuchou/work/atheros/openwrt/staging_dir/host/bin/lzma e /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tl-wr841n-v8-kernel.bin -lc1 -lp2 -pb2  /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tl-wr841n-v8-kernel.bin.new
+
+LZMA 4.65 : Igor Pavlov : Public domain : 2009-02-03
+/home/ayuchou/work/atheros/openwrt/staging_dir/host/bin/mksquashfs4 /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/root-ar71xx /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs -nopad -noappend -root-owned -comp xz -Xpreset 9 -Xe -Xlc 0 -Xlp 2 -Xpb 2  -b 256k -p '/dev d 755 0 0' -p '/dev/console c 600 0 0 5 1' -processors 1
+Parallel mksquashfs: Using 1 processor
+Creating 4.0 filesystem on /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs, block size 262144.
+Pseudo file "/dev" exists in source filesystem "/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/root-ar71xx/dev".
+Ignoring, exclude it (-e/-ef) to override.
+[============================================================================================================================================================================================-] 877/877 100%
+Exportable Squashfs 4.0 filesystem, xz compressed, data block size 262144
+	compressed data, compressed metadata, compressed fragments, no xattrs
+	duplicates are removed
+Filesystem size 4997.97 Kbytes (4.88 Mbytes)
+	27.90% of uncompressed filesystem size (17911.66 Kbytes)
+Inode table size 9278 bytes (9.06 Kbytes)
+	24.66% of uncompressed inode table size (37626 bytes)
+Directory table size 11466 bytes (11.20 Kbytes)
+	49.14% of uncompressed directory table size (23334 bytes)
+Number of duplicate files found 8
+Number of inodes 1134
+Number of files 839
+Number of fragments 24
+Number of symbolic links  190
+Number of device nodes 1
+Number of fifo nodes 0
+Number of socket nodes 0
+Number of directories 104
+Number of ids (unique uids + gids) 1
+Number of uids 1
+	root (0)
+Number of gids 1
+	root (0)
+[ -f /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tl-wr841n-v8-kernel.bin -a -f /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs ]
+dd if=/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs  >> /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr841n-v8-squashfs-sysupgrade.bin
+9995+1 records in
+9995+1 records out
+5117926 bytes (5.1 MB) copied, 0.014081 s, 363 MB/s
+/home/ayuchou/work/atheros/openwrt/staging_dir/host/bin/mktplinkfw -H 0x08410008 -W 0x1 -F 4Mlzma -N OpenWrt -V r47794 -k /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tl-wr841n-v8-kernel.bin -r /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr841n-v8-squashfs-sysupgrade.bin -o /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr841n-v8-squashfs-sysupgrade.bin.new -j -X 0x40000 -a 0x4 -s && mv /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr841n-v8-squashfs-sysupgrade.bin.new /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr841n-v8-squashfs-sysupgrade.bin || rm -f /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr841n-v8-squashfs-sysupgrade.bin
+[mktplinkfw] kernel length aligned to 1166264
+[mktplinkfw] *** error: images are too big
+cp /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr841n-v8-squashfs-sysupgrade.bin /home/ayuchou/work/atheros/openwrt/bin/ar71xx/openwrt-ar71xx-generic-tl-wr841n-v8-squashfs-sysupgrade.bin
+cp: cannot stat '/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr841n-v8-squashfs-sysupgrade.bin': No such file or directory
+make[5]: [/home/ayuchou/work/atheros/openwrt/bin/ar71xx/openwrt-ar71xx-generic-tl-wr841n-v8-squashfs-sysupgrade.bin] Error 1 (ignored)
+[ -f /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tl-wr841n-v8-kernel.bin -a -f /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs ]
+dd if=/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs  >> /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr841n-v8-squashfs-factory.bin
+9995+1 records in
+9995+1 records out
+5117926 bytes (5.1 MB) copied, 0.0150931 s, 339 MB/s
+/home/ayuchou/work/atheros/openwrt/staging_dir/host/bin/mktplinkfw -H 0x08410008 -W 0x1 -F 4Mlzma -N OpenWrt -V r47794 -k /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tl-wr841n-v8-kernel.bin -r /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr841n-v8-squashfs-factory.bin -o /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr841n-v8-squashfs-factory.bin.new -j -X 0x40000 -a 0x4  && mv /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr841n-v8-squashfs-factory.bin.new /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr841n-v8-squashfs-factory.bin || rm -f /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr841n-v8-squashfs-factory.bin
+[mktplinkfw] kernel length aligned to 1166264
+[mktplinkfw] *** error: images are too big
+cp /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr841n-v8-squashfs-factory.bin /home/ayuchou/work/atheros/openwrt/bin/ar71xx/openwrt-ar71xx-generic-tl-wr841n-v8-squashfs-factory.bin
+cp: cannot stat '/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr841n-v8-squashfs-factory.bin': No such file or directory
+make[5]: [/home/ayuchou/work/atheros/openwrt/bin/ar71xx/openwrt-ar71xx-generic-tl-wr841n-v8-squashfs-factory.bin] Error 1 (ignored)
+rm -f /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tl-wr841n-v9-kernel.bin
+cp /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/vmlinux /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tl-wr841n-v9-kernel.bin
+/home/ayuchou/work/atheros/openwrt/staging_dir/host/bin/patch-cmdline /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tl-wr841n-v9-kernel.bin 'board=TL-WR841N-v9  console=ttyS0,115200'
+/home/ayuchou/work/atheros/openwrt/staging_dir/host/bin/lzma e /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tl-wr841n-v9-kernel.bin -lc1 -lp2 -pb2  /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tl-wr841n-v9-kernel.bin.new
+
+LZMA 4.65 : Igor Pavlov : Public domain : 2009-02-03
+[ -f /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tl-wr841n-v9-kernel.bin -a -f /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs ]
+dd if=/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs  >> /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr841n-v9-squashfs-sysupgrade.bin
+9995+1 records in
+9995+1 records out
+5117926 bytes (5.1 MB) copied, 0.0141758 s, 361 MB/s
+/home/ayuchou/work/atheros/openwrt/staging_dir/host/bin/mktplinkfw -H 0x08410009 -W 0x1 -F 16Mlzma -N OpenWrt -V r47794 -k /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tl-wr841n-v9-kernel.bin -r /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr841n-v9-squashfs-sysupgrade.bin -o /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr841n-v9-squashfs-sysupgrade.bin.new -j -X 0x40000 -a 0x4 -s && mv /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr841n-v9-squashfs-sysupgrade.bin.new /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr841n-v9-squashfs-sysupgrade.bin || rm -f /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr841n-v9-squashfs-sysupgrade.bin
+[mktplinkfw] kernel length aligned to 1166264
+[mktplinkfw] firmware file "/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr841n-v9-squashfs-sysupgrade.bin.new" completed
+cp /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr841n-v9-squashfs-sysupgrade.bin /home/ayuchou/work/atheros/openwrt/bin/ar71xx/openwrt-ar71xx-generic-tl-wr841n-v9-squashfs-sysupgrade.bin
+[ -f /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tl-wr841n-v9-kernel.bin -a -f /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs ]
+dd if=/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs  >> /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr841n-v9-squashfs-factory.bin
+9995+1 records in
+9995+1 records out
+5117926 bytes (5.1 MB) copied, 0.0166939 s, 307 MB/s
+/home/ayuchou/work/atheros/openwrt/staging_dir/host/bin/mktplinkfw -H 0x08410009 -W 0x1 -F 16Mlzma -N OpenWrt -V r47794 -k /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tl-wr841n-v9-kernel.bin -r /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr841n-v9-squashfs-factory.bin -o /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr841n-v9-squashfs-factory.bin.new -j -X 0x40000 -a 0x4  && mv /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr841n-v9-squashfs-factory.bin.new /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr841n-v9-squashfs-factory.bin || rm -f /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr841n-v9-squashfs-factory.bin
+[mktplinkfw] kernel length aligned to 1166264
+[mktplinkfw] firmware file "/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr841n-v9-squashfs-factory.bin.new" completed
+cp /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr841n-v9-squashfs-factory.bin /home/ayuchou/work/atheros/openwrt/bin/ar71xx/openwrt-ar71xx-generic-tl-wr841n-v9-squashfs-factory.bin
+rm -f /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tl-wr841n-v10-kernel.bin
+cp /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/vmlinux /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tl-wr841n-v10-kernel.bin
+/home/ayuchou/work/atheros/openwrt/staging_dir/host/bin/patch-cmdline /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tl-wr841n-v10-kernel.bin 'board=TL-WR841N-v9  console=ttyS0,115200'
+/home/ayuchou/work/atheros/openwrt/staging_dir/host/bin/lzma e /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tl-wr841n-v10-kernel.bin -lc1 -lp2 -pb2  /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tl-wr841n-v10-kernel.bin.new
+
+LZMA 4.65 : Igor Pavlov : Public domain : 2009-02-03
+[ -f /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tl-wr841n-v10-kernel.bin -a -f /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs ]
+dd if=/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs  >> /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr841n-v10-squashfs-sysupgrade.bin
+9995+1 records in
+9995+1 records out
+5117926 bytes (5.1 MB) copied, 0.0146056 s, 350 MB/s
+/home/ayuchou/work/atheros/openwrt/staging_dir/host/bin/mktplinkfw -H 0x08410010 -W 0x1 -F 16Mlzma -N OpenWrt -V r47794 -k /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tl-wr841n-v10-kernel.bin -r /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr841n-v10-squashfs-sysupgrade.bin -o /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr841n-v10-squashfs-sysupgrade.bin.new -j -X 0x40000 -a 0x4 -s && mv /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr841n-v10-squashfs-sysupgrade.bin.new /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr841n-v10-squashfs-sysupgrade.bin || rm -f /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr841n-v10-squashfs-sysupgrade.bin
+[mktplinkfw] kernel length aligned to 1166264
+[mktplinkfw] firmware file "/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr841n-v10-squashfs-sysupgrade.bin.new" completed
+cp /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr841n-v10-squashfs-sysupgrade.bin /home/ayuchou/work/atheros/openwrt/bin/ar71xx/openwrt-ar71xx-generic-tl-wr841n-v10-squashfs-sysupgrade.bin
+[ -f /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tl-wr841n-v10-kernel.bin -a -f /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs ]
+dd if=/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs  >> /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr841n-v10-squashfs-factory.bin
+9995+1 records in
+9995+1 records out
+5117926 bytes (5.1 MB) copied, 0.0149215 s, 343 MB/s
+/home/ayuchou/work/atheros/openwrt/staging_dir/host/bin/mktplinkfw -H 0x08410010 -W 0x1 -F 16Mlzma -N OpenWrt -V r47794 -k /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tl-wr841n-v10-kernel.bin -r /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr841n-v10-squashfs-factory.bin -o /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr841n-v10-squashfs-factory.bin.new -j -X 0x40000 -a 0x4  && mv /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr841n-v10-squashfs-factory.bin.new /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr841n-v10-squashfs-factory.bin || rm -f /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr841n-v10-squashfs-factory.bin
+[mktplinkfw] kernel length aligned to 1166264
+[mktplinkfw] firmware file "/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr841n-v10-squashfs-factory.bin.new" completed
+cp /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr841n-v10-squashfs-factory.bin /home/ayuchou/work/atheros/openwrt/bin/ar71xx/openwrt-ar71xx-generic-tl-wr841n-v10-squashfs-factory.bin
+rm -f /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tl-wr847n-v8-kernel.bin
+cp /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/vmlinux /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tl-wr847n-v8-kernel.bin
+/home/ayuchou/work/atheros/openwrt/staging_dir/host/bin/patch-cmdline /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tl-wr847n-v8-kernel.bin 'board=TL-WR841N-v8  console=ttyS0,115200'
+/home/ayuchou/work/atheros/openwrt/staging_dir/host/bin/lzma e /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tl-wr847n-v8-kernel.bin -lc1 -lp2 -pb2  /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tl-wr847n-v8-kernel.bin.new
+
+LZMA 4.65 : Igor Pavlov : Public domain : 2009-02-03
+[ -f /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tl-wr847n-v8-kernel.bin -a -f /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs ]
+dd if=/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs  >> /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr847n-v8-squashfs-sysupgrade.bin
+9995+1 records in
+9995+1 records out
+5117926 bytes (5.1 MB) copied, 0.0139306 s, 367 MB/s
+/home/ayuchou/work/atheros/openwrt/staging_dir/host/bin/mktplinkfw -H 0x08470008 -W 0x1 -F 4Mlzma -N OpenWrt -V r47794 -k /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tl-wr847n-v8-kernel.bin -r /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr847n-v8-squashfs-sysupgrade.bin -o /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr847n-v8-squashfs-sysupgrade.bin.new -j -X 0x40000 -a 0x4 -s && mv /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr847n-v8-squashfs-sysupgrade.bin.new /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr847n-v8-squashfs-sysupgrade.bin || rm -f /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr847n-v8-squashfs-sysupgrade.bin
+[mktplinkfw] kernel length aligned to 1166264
+[mktplinkfw] *** error: images are too big
+cp /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr847n-v8-squashfs-sysupgrade.bin /home/ayuchou/work/atheros/openwrt/bin/ar71xx/openwrt-ar71xx-generic-tl-wr847n-v8-squashfs-sysupgrade.bin
+cp: cannot stat '/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr847n-v8-squashfs-sysupgrade.bin': No such file or directory
+make[5]: [/home/ayuchou/work/atheros/openwrt/bin/ar71xx/openwrt-ar71xx-generic-tl-wr847n-v8-squashfs-sysupgrade.bin] Error 1 (ignored)
+[ -f /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tl-wr847n-v8-kernel.bin -a -f /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs ]
+dd if=/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs  >> /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr847n-v8-squashfs-factory.bin
+9995+1 records in
+9995+1 records out
+5117926 bytes (5.1 MB) copied, 0.0169653 s, 302 MB/s
+/home/ayuchou/work/atheros/openwrt/staging_dir/host/bin/mktplinkfw -H 0x08470008 -W 0x1 -F 4Mlzma -N OpenWrt -V r47794 -k /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tl-wr847n-v8-kernel.bin -r /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr847n-v8-squashfs-factory.bin -o /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr847n-v8-squashfs-factory.bin.new -j -X 0x40000 -a 0x4  && mv /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr847n-v8-squashfs-factory.bin.new /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr847n-v8-squashfs-factory.bin || rm -f /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr847n-v8-squashfs-factory.bin
+[mktplinkfw] kernel length aligned to 1166264
+[mktplinkfw] *** error: images are too big
+cp /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr847n-v8-squashfs-factory.bin /home/ayuchou/work/atheros/openwrt/bin/ar71xx/openwrt-ar71xx-generic-tl-wr847n-v8-squashfs-factory.bin
+cp: cannot stat '/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/openwrt-ar71xx-generic-tl-wr847n-v8-squashfs-factory.bin': No such file or directory
+make[5]: [/home/ayuchou/work/atheros/openwrt/bin/ar71xx/openwrt-ar71xx-generic-tl-wr847n-v8-squashfs-factory.bin] Error 1 (ignored)
+cp /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs-raw
+cp /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs-64k
+/home/ayuchou/work/atheros/openwrt/staging_dir/host/bin/padjffs2 /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs-64k 64
+padding image to 004f0000
+cp /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs-64k /home/ayuchou/work/atheros/openwrt/bin/ar71xx/openwrt-ar71xx-generic-root.squashfs-64k
+/home/ayuchou/work/atheros/openwrt/staging_dir/host/bin/padjffs2 /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs 4 8 16 64 128 256
+padding image to 004e2000
+padding image to 004e4000
+padding image to 004f0000
+padding image to 00500000
+dd if=/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs of=/home/ayuchou/work/atheros/openwrt/bin/ar71xx/openwrt-ar71xx-generic-root.squashfs bs=128k conv=sync
+40+1 records in
+41+0 records out
+5373952 bytes (5.4 MB) copied, 0.0040691 s, 1.3 GB/s
+[ -e "/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/loader-tl-wr841nd-v1.5.gz" ]
+mkimage -A mips -O linux -T kernel -a 0x80060000 -C lzma -M 0x4f4b4c49 -e 0x80060000 -n 'MIPS OpenWrt Linux-3.18.23' -d /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/vmlinux.bin.lzma /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/vmlinux-tl-wr841nd-v1.5.okli
+Image Name:   MIPS OpenWrt Linux-3.18.23
+Created:      Sat Apr  1 15:53:18 2017
+Image Type:   MIPS Linux Kernel Image (lzma compressed)
+Data Size:    1166298 Bytes = 1138.96 kB = 1.11 MB
+Load Address: 80060000
+Entry Point:  80060000
+( dd if=/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/loader-tl-wr841nd-v1.5.gz bs=7680 count=1 conv=sync; dd if=/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/vmlinux-tl-wr841nd-v1.5.okli conv=sync; ) > /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/kernel-tl-wr841nd-v1.5.bin
+0+1 records in
+1+0 records out
+7680 bytes (7.7 kB) copied, 6.7334e-05 s, 114 MB/s
+2278+1 records in
+2279+0 records out
+1166848 bytes (1.2 MB) copied, 0.00394096 s, 296 MB/s
+/home/ayuchou/work/atheros/openwrt/staging_dir/host/bin/mktplinkfw -H 0x08410002 -W 2 -F 4M -N OpenWrt -V r47794 -X 0x40000 -k /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/kernel-tl-wr841nd-v1.5.bin -r /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs -o /home/ayuchou/work/atheros/openwrt/bin/ar71xx/openwrt-ar71xx-generic-tl-wr841nd-v1.5-squashfs-factory.bin
+[mktplinkfw] *** error: rootfs image is too big
+make[5]: [install] Error 255 (ignored)
+/home/ayuchou/work/atheros/openwrt/staging_dir/host/bin/mktplinkfw -H 0x08410002 -W 2 -F 4M -N OpenWrt -V r47794 -s -X 0x40000 -k /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/kernel-tl-wr841nd-v1.5.bin -r /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs -o /home/ayuchou/work/atheros/openwrt/bin/ar71xx/openwrt-ar71xx-generic-tl-wr841nd-v1.5-squashfs-sysupgrade.bin
+[mktplinkfw] *** error: rootfs image is too big
+make[5]: [install] Error 255 (ignored)
+[ -e "/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/loader-tl-wr841nd-v3.gz" ]
+mkimage -A mips -O linux -T kernel -a 0x80060000 -C lzma -M 0x4f4b4c49 -e 0x80060000 -n 'MIPS OpenWrt Linux-3.18.23' -d /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/vmlinux.bin.lzma /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/vmlinux-tl-wr841nd-v3.okli
+Image Name:   MIPS OpenWrt Linux-3.18.23
+Created:      Sat Apr  1 15:53:18 2017
+Image Type:   MIPS Linux Kernel Image (lzma compressed)
+Data Size:    1166298 Bytes = 1138.96 kB = 1.11 MB
+Load Address: 80060000
+Entry Point:  80060000
+( dd if=/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/loader-tl-wr841nd-v3.gz bs=7680 count=1 conv=sync; dd if=/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/vmlinux-tl-wr841nd-v3.okli conv=sync; ) > /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/kernel-tl-wr841nd-v3.bin
+0+1 records in
+1+0 records out
+7680 bytes (7.7 kB) copied, 5.9125e-05 s, 130 MB/s
+2278+1 records in
+2279+0 records out
+1166848 bytes (1.2 MB) copied, 0.00453446 s, 257 MB/s
+/home/ayuchou/work/atheros/openwrt/staging_dir/host/bin/mktplinkfw -H 0x08410003 -W 3 -F 4M -N OpenWrt -V r47794 -X 0x40000 -k /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/kernel-tl-wr841nd-v3.bin -r /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs-raw -a 0x4 -j -o /home/ayuchou/work/atheros/openwrt/bin/ar71xx/openwrt-ar71xx-generic-tl-wr841nd-v3-squashfs-factory.bin
+[mktplinkfw] kernel length aligned to 1174528
+[mktplinkfw] *** error: images are too big
+make[5]: [install] Error 255 (ignored)
+/home/ayuchou/work/atheros/openwrt/staging_dir/host/bin/mktplinkfw -H 0x08410003 -W 3 -F 4M -N OpenWrt -V r47794 -s -X 0x40000 -k /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/kernel-tl-wr841nd-v3.bin -r /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs-raw -a 0x4 -j -o /home/ayuchou/work/atheros/openwrt/bin/ar71xx/openwrt-ar71xx-generic-tl-wr841nd-v3-squashfs-sysupgrade.bin
+[mktplinkfw] kernel length aligned to 1174528
+[mktplinkfw] *** error: images are too big
+make[5]: [install] Error 255 (ignored)
+[ -e "/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/loader-tl-wr841nd-v5.gz" ]
+mkimage -A mips -O linux -T kernel -a 0x80060000 -C lzma -M 0x4f4b4c49 -e 0x80060000 -n 'MIPS OpenWrt Linux-3.18.23' -d /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/vmlinux.bin.lzma /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/vmlinux-tl-wr841nd-v5.okli
+Image Name:   MIPS OpenWrt Linux-3.18.23
+Created:      Sat Apr  1 15:53:18 2017
+Image Type:   MIPS Linux Kernel Image (lzma compressed)
+Data Size:    1166298 Bytes = 1138.96 kB = 1.11 MB
+Load Address: 80060000
+Entry Point:  80060000
+( dd if=/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/loader-tl-wr841nd-v5.gz bs=7680 count=1 conv=sync; dd if=/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/vmlinux-tl-wr841nd-v5.okli conv=sync; ) > /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/kernel-tl-wr841nd-v5.bin
+0+1 records in
+1+0 records out
+7680 bytes (7.7 kB) copied, 5.2243e-05 s, 147 MB/s
+2278+1 records in
+2279+0 records out
+1166848 bytes (1.2 MB) copied, 0.00393637 s, 296 MB/s
+/home/ayuchou/work/atheros/openwrt/staging_dir/host/bin/mktplinkfw -H 0x08410005 -W 1 -F 4M -N OpenWrt -V r47794 -X 0x40000 -k /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/kernel-tl-wr841nd-v5.bin -r /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs-raw -a 0x4 -j -o /home/ayuchou/work/atheros/openwrt/bin/ar71xx/openwrt-ar71xx-generic-tl-wr841nd-v5-squashfs-factory.bin
+[mktplinkfw] kernel length aligned to 1174528
+[mktplinkfw] *** error: images are too big
+make[5]: [install] Error 255 (ignored)
+/home/ayuchou/work/atheros/openwrt/staging_dir/host/bin/mktplinkfw -H 0x08410005 -W 1 -F 4M -N OpenWrt -V r47794 -s -X 0x40000 -k /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/kernel-tl-wr841nd-v5.bin -r /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs-raw -a 0x4 -j -o /home/ayuchou/work/atheros/openwrt/bin/ar71xx/openwrt-ar71xx-generic-tl-wr841nd-v5-squashfs-sysupgrade.bin
+[mktplinkfw] kernel length aligned to 1174528
+[mktplinkfw] *** error: images are too big
+make[5]: [install] Error 255 (ignored)
+[ -e "/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/loader-tl-wr841nd-v7.gz" ]
+mkimage -A mips -O linux -T kernel -a 0x80060000 -C lzma -M 0x4f4b4c49 -e 0x80060000 -n 'MIPS OpenWrt Linux-3.18.23' -d /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/vmlinux.bin.lzma /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/vmlinux-tl-wr841nd-v7.okli
+Image Name:   MIPS OpenWrt Linux-3.18.23
+Created:      Sat Apr  1 15:53:18 2017
+Image Type:   MIPS Linux Kernel Image (lzma compressed)
+Data Size:    1166298 Bytes = 1138.96 kB = 1.11 MB
+Load Address: 80060000
+Entry Point:  80060000
+( dd if=/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/loader-tl-wr841nd-v7.gz bs=7680 count=1 conv=sync; dd if=/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/vmlinux-tl-wr841nd-v7.okli conv=sync; ) > /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/kernel-tl-wr841nd-v7.bin
+0+1 records in
+1+0 records out
+7680 bytes (7.7 kB) copied, 6.0414e-05 s, 127 MB/s
+2278+1 records in
+2279+0 records out
+1166848 bytes (1.2 MB) copied, 0.00513355 s, 227 MB/s
+/home/ayuchou/work/atheros/openwrt/staging_dir/host/bin/mktplinkfw -H 0x08410007 -W 1 -F 4M -N OpenWrt -V r47794 -X 0x40000 -k /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/kernel-tl-wr841nd-v7.bin -r /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs-raw -a 0x4 -j -o /home/ayuchou/work/atheros/openwrt/bin/ar71xx/openwrt-ar71xx-generic-tl-wr841nd-v7-squashfs-factory.bin
+[mktplinkfw] kernel length aligned to 1174528
+[mktplinkfw] *** error: images are too big
+make[5]: [install] Error 255 (ignored)
+/home/ayuchou/work/atheros/openwrt/staging_dir/host/bin/mktplinkfw -H 0x08410007 -W 1 -F 4M -N OpenWrt -V r47794 -s -X 0x40000 -k /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/kernel-tl-wr841nd-v7.bin -r /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs-raw -a 0x4 -j -o /home/ayuchou/work/atheros/openwrt/bin/ar71xx/openwrt-ar71xx-generic-tl-wr841nd-v7-squashfs-sysupgrade.bin
+[mktplinkfw] kernel length aligned to 1174528
+[mktplinkfw] *** error: images are too big
+make[5]: [install] Error 255 (ignored)
+( cd /home/ayuchou/work/atheros/openwrt/bin/ar71xx ; find -maxdepth 1 -type f \! -name 'md5sums'  -printf "%P\n" | sort | xargs md5sum --binary > md5sums )
+( cd /home/ayuchou/work/atheros/openwrt/bin/ar71xx ; find -maxdepth 1 -type f \! -name 'md5sums'  -printf "%P\n" | sort | xargs openssl dgst -sha256 > sha256sums )
+make[5]: Leaving directory `/home/ayuchou/work/atheros/openwrt/target/linux/ar71xx/image'
+make[4]: Leaving directory `/home/ayuchou/work/atheros/openwrt/target/linux/ar71xx'
+make[3]: Leaving directory `/home/ayuchou/work/atheros/openwrt/target/linux'
+make[2]: Leaving directory `/home/ayuchou/work/atheros/openwrt'
+export MAKEFLAGS= ;make -w -r package/index
+make[2]: Entering directory `/home/ayuchou/work/atheros/openwrt'
+d

@@ -1,0 +1,32 @@
+#!/bin/sh
+
+cp  /home/ayuchou/work/atheros/openwrt/sh/config/2g-shiwai  /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/root-ar71xx/etc/config/wireless
+
+
+
+cp /home/ayuchou/work/atheros/network  /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/root-ar71xx/etc/config/
+
+
+
+/home/ayuchou/work/atheros/openwrt/staging_dir/host/bin/mksquashfs4 /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/root-ar71xx /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs -nopad -noappend -root-owned -comp xz -Xpreset 9 -Xe -Xlc 0 -Xlp 2 -Xpb 2  -b 256k -p '/dev d 755 0 0' -p '/dev/console c 600 0 0 5 1' -processors 1
+
+
+
+cp /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs-raw
+cp /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs-64k
+/home/ayuchou/work/atheros/openwrt/staging_dir/host/bin/padjffs2 /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs-64k 64
+padding image to 005e0000
+cp /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs-64k /home/ayuchou/work/atheros/openwrt/bin/ar71xx/openwrt-ar71xx-generic-root.squashfs-64k
+/home/ayuchou/work/atheros/openwrt/staging_dir/host/bin/padjffs2 /home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs 4 8 16 64 128 25
+
+
+
+dd if=/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs of=/home/ayuchou/work/atheros/openwrt/bin/ar71xx/openwrt-ar71xx-generic-root.squashfs bs=128k conv=sync
+
+t=`date +%Y-%m-%d-%H-%M-%S`
+#t=`date +%Y-%m-%d`
+
+ ( dd if=/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs-64k ; dd if=/home/ayuchou/work/atheros/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/vmlinux-ap147-010.uImage ) > /home/ayuchou/work/atheros/openwrt/bin/ar71xx/ap147-2G-shiwai.bin;
+
+#/home/ayuchou/work/atheros/openwrt/staging_dir/host/bin/padjffs2 /home/ayuchou/work/atheros/openwrt/bin/ar71xx/ap147-$t.bin 4 8 16 64 128 256
+
