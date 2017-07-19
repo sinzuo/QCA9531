@@ -57,4 +57,4 @@ config led 'led_wlan2g'
 	option trigger 'netdev'
 	option dev 'radio0'
 	option mode 'link tx rx'
-
+	option dev 'ath0'

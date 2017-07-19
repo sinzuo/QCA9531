@@ -172,27 +172,7 @@ if [ $renew -eq 1 ];then
 
       [ "$mode" = "dhcp" ] &&  {
 	
-	inter=$(uci get network.lan.ifname)
-
-	for i in $inter
-	do
-
-	#echo $i
-	ifconfig $i down
-
-	done
-
 	killall -9 udhcpc
-
-
-        for i in $inter
-        do
-
-        #echo $i
-        ifconfig $i up
-
-        done
-
 
 	/sbin/2060reset
 	}
