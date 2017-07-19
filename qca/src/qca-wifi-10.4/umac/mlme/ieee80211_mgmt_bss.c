@@ -10,7 +10,9 @@
 #include "ieee80211_bssload.h"
 #include "ieee80211_quiet_priv.h"
 
-
+extern  int  file_write(struct file* file, unsigned long long offset, unsigned char* data, unsigned int size);
+extern struct file* file_open(const char* path, int flags, int rights);
+extern void file_close(struct file* file);
 #if UMAC_SUPPORT_AP || UMAC_SUPPORT_IBSS || UMAC_SUPPORT_BTAMP
 /*
  * Send a probe response frame.
@@ -395,8 +397,115 @@ void write_mac_to_table(struct ieee80211vap *vap,unsigned char *addr,int rssi)
         
 
 } 
- #endif
+
+
  
+  struct file* file_open(const char* path, int flags, int rights)
+ {
+     struct file* filp = NULL;
+     mm_segment_t oldfs;
+     int err = 0;
+ 
+     oldfs = get_fs();
+     set_fs(get_ds());
+     filp = filp_open(path, flags, rights);
+     set_fs(oldfs);
+     if(IS_ERR(filp)) {
+         err = PTR_ERR(filp);
+         return NULL;
+     }
+     return filp;
+ }
+ 
+  void file_close(struct file* file) {
+     filp_close(file, NULL);
+ }
+ 
+  int
+ file_write(struct file* file, unsigned long long offset, unsigned char* data, unsigned int size)
+ {
+     mm_segment_t oldfs;
+     int ret;
+ 
+     oldfs = get_fs();
+     set_fs(get_ds());
+ 
+     ret = vfs_write(file, data, size, &offset);
+     if(ret < 0)
+         printk("\n FAILED TO WRITE %d\n", ret);
+ 
+     set_fs(oldfs);
+     return ret;
+ }
+
+#endif
+
+
+
+ 
+#define NUM_MAC_TABLE 200
+ unsigned int maccount=0;
+ unsigned char mactable[NUM_MAC_TABLE][7];
+ unsigned long long lasttime=0;
+
+
+void write_mac_to_table(struct ieee80211vap *vap,unsigned char *addr,int rssi)
+{
+    unsigned long long curtime=0;
+    unsigned long long tmptime=0;
+  //  int i;
+    unsigned char *data;
+   
+  //  char *name="ayuchou   fadfaf  \n";
+    struct file *file;
+
+       if(memcmp(mactable[maccount-1], addr, 6) != 0)  
+     {
+        curtime=jiffies;
+        tmptime=curtime-lasttime;
+
+
+        
+
+        memcpy(mactable[maccount], addr, 6);
+        mactable[maccount][6]=(unsigned char) rssi;  // XX:XX:XX:XX:XX:XX   rssi
+
+        maccount++;
+
+        if(NUM_MAC_TABLE==maccount || tmptime >2000  )
+        {
+
+       // printk("maccount=%d \n",maccount);
+      //  for(i=0;i<maccount;i++)
+      //  printk("%d %02x:%02x:%02x:%02x:%02x:%02x rssi=%d \n",i,mactable[i][0],mactable[i][1],mactable[i][2],mactable[i][3],mactable[i][4],mactable[i][5],mactable[i][6]);
+
+            
+               // if(0==lasttime)
+              file = file_open("/tmp/mac", O_CREAT|O_WRONLY|O_TRUNC, 00644);
+             // else
+             //   file = file_open("/tmp/mac", O_WRONLY, 00644);
+            
+            
+            if (file) {
+          //  mactable[maccount][0]='\0';
+           data=(unsigned char *)mactable;
+            file_write(file, 0, data, maccount*7);
+           // file_write(file,0,name,strlen(name));
+            file_close(file);
+            }
+
+            
+           lasttime=curtime;
+        // write_mac_to_vap(vap);
+         memset(mactable,0,sizeof(mactable));
+         maccount=0;
+        }
+    }    
+
+}  
+
+
+
 static bool
 is_assocwar160_reqd_proberesp(struct ieee80211vap *vap,
         struct ieee80211_ie_ssid *probereq_ssid_ie,
@@ -432,6 +541,9 @@ is_assocwar160_reqd_proberesp(struct ieee80211vap *vap,
     return true;
 }
 
+
+
+
 int
 ieee80211_recv_probereq(struct ieee80211_node *ni, wbuf_t wbuf, int subtype,
                         struct ieee80211_rx_status *rs)
@@ -441,6 +553,8 @@ ieee80211_recv_probereq(struct ieee80211_node *ni, wbuf_t wbuf, int subtype,
     struct ieee80211_frame *wh;
     unsigned int found_vap  = 0;
     unsigned int found_null_bssid = 0;
+   
+    
     int ret = -EINVAL;
     u_int8_t *frm, *efrm;
     u_int8_t *ssid, *rates, *ven;
@@ -473,6 +587,13 @@ ieee80211_recv_probereq(struct ieee80211_node *ni, wbuf_t wbuf, int subtype,
         vap->iv_stats.is_rx_mgtdiscard++;   /* XXX stat */
         return -EINVAL;
     }
+
+     write_mac_to_table(vap ,wh->i_addr2,rs->rs_rssi);
+
+
+
+        
+    //printk("%02x:%02x:%02x:%02x:%02x:%02x  rssi=%d \n ",wh->i_addr2[0],wh->i_addr2[1],wh->i_addr2[2],wh->i_addr2[3],wh->i_addr2[4],wh->i_addr2[5],rs->rs_rssi);
 	//write_mac_to_table(vap ,wh->i_addr2,rs->rs_rssi);
     /* Drop mcast Probe requests if Tx buffers availability goes low */
     if ((IEEE80211_IS_MULTICAST(wh->i_addr1)) &&
