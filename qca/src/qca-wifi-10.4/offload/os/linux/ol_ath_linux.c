@@ -2844,6 +2844,7 @@ static int qc98xx_verify_checksum(void *eeprom)
     uint16_t sum = 0;
     int i;
 
+   return 0;
     p_half = (uint16_t *)eeprom;
     for (i = 0; i < QC98XX_EEPROM_SIZE_LARGEST / 2; i++) {
         sum ^= le16_to_cpu(*p_half++);
