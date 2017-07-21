@@ -66,28 +66,35 @@ int socket_udp_init(int port,char *ip)
     return 0;
 }
 
-void read_mac(){	
-    FILE *fp;
-    char mactable[1400];
-    char *data;	
-    unsigned rc	= 1400;
-    unsigned int size;
-    int i = 0;
-    data=mactable;
-    if(NULL == (fp=fopen("/tmp/mac","r")))
+uint32_t remove_duplicate(uint8_t *src,uint32_t size,uint8_t *buf,uint32_t bufsize)
+{
+    if(NULL == src || NULL == buf || size > bufsize)
     {
-        printf("file cannot be opened\n");
-        return ;
+        return 0;
     }
-    size=fread(mactable,1,rc,fp);
+    uint32_t i=0; 
+    uint32_t j=0;
+    uint32_t r=0;
+    uint32_t dup=0;
     for(i=0;i<size;i=i+7)
     {
-        data = mactable + i;
-          
+        dup=0; 
+        for(j=0;j<r;j=j+7)
+        {
+           if(0 == strncmp(src+i,buf+j,6)) 
+           {
+               dup=1;
+               break;
+           }
+        }  
+        if(0 == dup)
+        {
+            strncpy(buf+r,src+i,7);
+            r=r+7;
+        }
     }
-    fclose(fp);
+    return r;
 }
-
 static void probe_data_sender(struct uloop_timeout *timeout)
 {
     clear_log();
@@ -102,11 +109,11 @@ static void probe_data_sender(struct uloop_timeout *timeout)
 
     FILE *fp;
     uint8_t mactable[1400];
+    uint8_t senddata[1400];
     uint8_t *data;
     uint32_t rc = 1400;
     uint32_t size = 0;
-    int i = 0;
-    data=mactable;
+    uint32_t i = 0;
     if(NULL == (fp=fopen("/tmp/mac","r")))
     {   
         D("/tmp/mac file cannot be opened");
@@ -124,9 +131,10 @@ static void probe_data_sender(struct uloop_timeout *timeout)
     	}
         g_client_dbm = dbm; 
         g_client_char = *mactable; 
-        for(i=0;i<size;i=i+7)
+        uint32_t sendsize=remove_duplicate(mactable,size,senddata,1400); 
+        for(i=0;i<sendsize;i=i+7)
         {   
-            data = mactable + i;
+            data = senddata + i;
             dbm = *(data + 6) - 95; 
             //D("dbm:%d",dbm);
             if(dbm < g_pdev.threshold)
@@ -143,7 +151,7 @@ static void probe_data_sender(struct uloop_timeout *timeout)
             g_pp.resvert = 84;
             sendto(g_socket,(char *)&g_pp,sizeof(struct probe_pack),0,(struct sockaddr *)&g_addr,sizeof(struct sockaddr));
             sendtotal++;
-            //D("mac:%02X:%02X:%02X:%02X:%02X:%02X,%d",data[0],data[1],data[2],data[3],data[4],data[5],g_pp.real_rssi);
+            D("mac:%02X:%02X:%02X:%02X:%02X:%02X,%d",data[0],data[1],data[2],data[3],data[4],data[5],g_pp.real_rssi);
         }
     }
 done:
