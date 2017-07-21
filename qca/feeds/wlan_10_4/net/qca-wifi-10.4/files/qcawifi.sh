@@ -1922,7 +1922,6 @@ config wifi-device  wifi$devidx
 	# REMOVE THIS LINE TO ENABLE WIFI:
 	#option disabled 1
 	option country  US
-	option txpower 23
 	
 config wifi-iface
 	option device	wifi$devidx
