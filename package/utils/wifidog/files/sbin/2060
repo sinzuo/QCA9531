@@ -94,21 +94,8 @@ FirewallRuleSet unknown-users {
 FirewallRuleSet locked-users {
     FirewallRule block to 0.0.0.0/0
 }
-" > /etc/wifidog.conf
+" > /tmp/wifidog.conf
 
-        gateway_hostname2=$(uci get wifidog.@wifidog[0].gateway_hostname2 2>/dev/null) 
-        gateway_httpport2=$(uci get wifidog.@wifidog[0].gateway_httpport2 2>/dev/null) 
-        gateway_path2=$(uci get wifidog.@wifidog[0].gateway_path2 2>/dev/null) 
-        ssl_enable2=$(uci get wifidog.@wifidog[0].ssl_enable2 2>/dev/null) 
-        if [ "$gateway_hostname2" != "" ]; then
-echo "
-AuthServer {
-        Hostname $gateway_hostname2
-        HTTPPort $gateway_httpport2
-        Path $gateway_path2
-}
-" >> /etc/wifidog.conf
-fi
 }
 
 set_gateway_id()
