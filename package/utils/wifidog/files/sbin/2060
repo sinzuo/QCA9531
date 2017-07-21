@@ -5,6 +5,9 @@
 urlweb="www.baidu.com www.qq.com www.aliyun.com"
 config_load()
 {
+
+cp /etc/wifidog-msg.html /tmp
+
 head="FirewallRule allow to "
 
 rules=""
