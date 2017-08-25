@@ -165,6 +165,8 @@ if [ $renew -eq 1 ];then
 	killall -9 udhcpc
 
 	/sbin/2060reset
+	/sbin/wifi
+
 	}
      
 #      mode=$(uci show network.wan.proto)		
@@ -324,17 +326,19 @@ echo "test"
 
 
 
+[ -z "$(ifconfig | grep br-lan:2)" ] && {
+        ifconfig br-lan:2 192.168.100.1                      
+}  
 
+#[ $timecount -gt 60 ] && {
 
-[ $timecount -gt 60 ] && {
+#timecount=0
 
-timecount=0
+#is_online
 
-is_online
+#}
 
-}
-
-timecount=$(($timecount+1))
+#timecount=$(($timecount+1))
 
 #sleep 30
 
