@@ -52,7 +52,10 @@ function split(str, delimiter)
 end
 
 function get_assoclist(th)
-    if not th or 0 <= th + 0 then th = -80 end
+    th = tonumber(th)
+    if not th or 0 <= th + 0 then th = -85 end
+    local kth = uci:get("wireless","wifi0","AuthRssiThres") 
+    if not kth or 0 <= kth + 0 then kth = -90 end
     local res = {}
     local count=0
     local dir = "/sys/devices/virtual/net/"
@@ -68,17 +71,22 @@ function get_assoclist(th)
             if fd then
                 local line = nil
                 while true do
-                    local cli = {}
                     line = nil
                     line = fd:read("*l")
                     if not line or #line==0 then break end
                     row=split(line," ")
-                    if row[2] + 0 < th + 0 then
-                        cli["inf"] = v
-                        cli["mac"] = string.upper(row[1])
-                        cli["sign"] = row[2]
-                        table.insert(res,cli)
-                        count=count+1
+                    if row[2] + 0 < kth + 0 then
+                        os.execute("iwpriv "..v.." kickmac "..string.upper(row[1]))
+                        D("kickmac:"..row[1].." sign:"..row[2])
+                    else
+                        if row[2] + 0 < th + 0 then
+                            local cli = {}
+                            cli["inf"] = v
+                            cli["mac"] = string.upper(row[1])
+                            cli["sign"] = row[2]
+                            table.insert(res,cli)
+                            count=count+1
+                        end
                     end
                 end
             end
