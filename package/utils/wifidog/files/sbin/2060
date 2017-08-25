@@ -160,7 +160,7 @@ if [ $renew -eq 1 ];then
 	mode=$(uci get network.lan.proto)
 	
 
-      [ "$mode" = "dhcp" ] &&  {
+      [ "$mode" == "dhcp" ] &&  {
 	
 	killall -9 udhcpc
 
@@ -204,11 +204,18 @@ cp /etc/wifidog.key /tmp/wifidog.key
 /sbin/2060reset
 
 enable=`uci get wifidog.wifidog.wifidog_enable ` 2>/dev/null 
+timecount=0
 
 while [ 1 ]
 do
+
+sleep 30
+
 enable=`uci get wifidog.wifidog.wifidog_enable`
 echo "enable="$enable
+
+
+
  if [ "$enable" = "1" ];then
 
 
@@ -318,9 +325,19 @@ echo "test"
 
 
 
-sleep 30
+
+[ $timecount -gt 60 ] && {
+
+timecount=0
 
 is_online
+
+}
+
+timecount=$(($timecount+1))
+
+#sleep 30
+
 done
 
 

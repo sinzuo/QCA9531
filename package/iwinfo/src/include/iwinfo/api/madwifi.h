@@ -158,6 +158,7 @@ struct ieee80211req_sta_info {
 };
 #endif
 
+#if 0
 struct ieee80211req_sta_info {
         u_int16_t       isi_len;                /* length (mult of 4) */
         u_int16_t       isi_freq;               /* MHz */
@@ -204,6 +205,68 @@ struct ieee80211req_sta_info {
     u_int32_t isi_ext_cap;              /* Extended capabilities */
     u_int8_t isi_nss;         /* number of tx and rx chains */
     u_int8_t isi_is_256qam;    /* 256 QAM support */
+};
+
+#endif
+
+
+struct ieee80211req_sta_info {
+        u_int16_t       isi_len;                /* length (mult of 4) */
+        u_int16_t       isi_freq;               /* MHz */
+        u_int32_t       awake_time;             /* time is active mode */
+        u_int32_t       ps_time;                /* time in power save mode */
+        u_int32_t       isi_flags;      /* channel flags */
+        u_int16_t       isi_state;              /* state flags */
+        u_int8_t        isi_authmode;           /* authentication algorithm */
+        int8_t          isi_rssi;
+        int8_t          isi_min_rssi;
+        int8_t          isi_max_rssi;
+        u_int16_t       isi_capinfo;            /* capabilities */
+        u_int8_t        isi_athflags;           /* Atheros capabilities */
+        u_int8_t        isi_erp;                /* ERP element */
+        u_int8_t        isi_ps;         /* psmode */
+        u_int8_t        isi_macaddr[IEEE80211_ADDR_LEN];
+        u_int8_t        isi_nrates;
+                                                /* negotiated rates */
+        u_int8_t        isi_rates[IEEE80211_RATE_MAXSIZE];
+        u_int8_t        isi_txrate;             /* index to isi_rates[] */
+        u_int32_t       isi_txratekbps; /* tx rate in Kbps, for 11n */
+        u_int16_t       isi_ie_len;             /* IE length */
+        u_int16_t       isi_associd;            /* assoc response */
+        u_int16_t       isi_txpower;            /* current tx power */
+        u_int16_t       isi_vlan;               /* vlan tag */
+        u_int16_t       isi_txseqs[17];         /* seq to be transmitted */
+        u_int16_t       isi_rxseqs[17];         /* seq previous for qos frames*/
+        u_int16_t       isi_inact;              /* inactivity timer */
+        u_int8_t        isi_uapsd;              /* UAPSD queues */
+        u_int8_t        isi_opmode;             /* sta operating mode */
+        u_int8_t        isi_cipher;
+        u_int32_t       isi_assoc_time;         /* sta association time */
+        struct timespec isi_tr069_assoc_time;   /* sta association time in timespec format */
+
+
+        u_int16_t   isi_htcap;      /* HT capabilities */
+        u_int32_t   isi_rxratekbps; /* rx rate in Kbps */
+                                /* We use this as a common variable for legacy rates
+                                   and lln. We do not attempt to make it symmetrical
+                                   to isi_txratekbps and isi_txrate, which seem to be
+                                   separate due to legacy code. */
+        /* XXX frag state? */
+        /* variable length IE data */
+        u_int8_t isi_maxrate_per_client; /* Max rate per client */
+        u_int16_t   isi_stamode;        /* Wireless mode for connected sta */
+        u_int32_t isi_ext_cap;              /* Extended capabilities */
+        u_int8_t isi_nss;         /* number of tx and rx chains */
+        u_int8_t isi_is_256qam;    /* 256 QAM support */
+        u_int8_t isi_operating_bands : 2; /* Operating bands */
+
+//#if ATH_SUPPORT_EXT_STAT
+ //       u_int8_t  isi_chwidth;            /* communication band width */
+ //       u_int32_t isi_vhtcap;             /* VHT capabilities */
+//#endif
+
+        u_int8_t isi_rx_nss;         /* number of rx chains */
+        u_int8_t isi_tx_nss;         /* number of tx chains */
 };
 
 

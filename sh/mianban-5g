@@ -9,7 +9,7 @@ cp /home/ayuchou/work/9531/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/li
 /home/ayuchou/work/9531/openwrt/staging_dir/host/bin/mkimage -A mips -O linux -T kernel -a 0x80060000 -C lzma  -e 0x80060000 -n 'MIPS OpenWrt Linux-3.18.23' -d /home/ayuchou/work/9531/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/vmlinux-ap147-010.bin.lzma /home/ayuchou/work/9531/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/vmlinux-ap147-010.uImage
 
 
-cp /home/ayuchou/work/9531/openwrt/sh/config/qcawifi.sh.21  /home/ayuchou/work/9531/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/root-ar71xx/lib/wifi/qcawifi.sh
+#cp /home/ayuchou/work/9531/openwrt/sh/config/qcawifi.sh.21  /home/ayuchou/work/9531/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/root-ar71xx/lib/wifi/qcawifi.sh
 
 #cp  /home/ayuchou/work/9531/openwrt/sh/config/5g-xiding  /home/ayuchou/work/9531/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/root-ar71xx/etc/config/wireless
 
@@ -37,12 +37,12 @@ dd if=/home/ayuchou/work/9531/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2
 t=`date +%Y-%m-%d-%H-%M-%S`
 #t=`date +%Y-%m-%d`
 
- ( dd if=/home/ayuchou/work/9531/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs-64k bs=14876672 conv=sync; dd if=/home/ayuchou/work/9531/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/vmlinux-ap147-010.uImage ) > /home/ayuchou/work/9531/openwrt/bin/ar71xx/ap147-5G-mianban.bin;
+ ( dd if=/home/ayuchou/work/9531/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs-64k bs=14876672 conv=sync; dd if=/home/ayuchou/work/9531/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/vmlinux-ap147-010.uImage ) > /home/ayuchou/work/9531/openwrt/bin/ar71xx/ap147-5G-mianban-$1.bin;
 
 
 #( dd if=/home/ayuchou/work/9531/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs-64k  conv=sync; dd if=/home/ayuchou/work/9531/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/vmlinux-ap147-010.uImage ) > /home/ayuchou/work/9531/openwrt/bin/ar71xx/ap147-5G-xiding.bin;
 
 
 
-/home/ayuchou/work/9531/openwrt/staging_dir/host/bin/padjffs2 /home/ayuchou/work/9531/openwrt/bin/ar71xx/ap147-5G-mianban.bin 4 8 16 64 128 256
+/home/ayuchou/work/9531/openwrt/staging_dir/host/bin/padjffs2 /home/ayuchou/work/9531/openwrt/bin/ar71xx/ap147-5G-mianban-$1.bin 4 8 16 64 128 256
 

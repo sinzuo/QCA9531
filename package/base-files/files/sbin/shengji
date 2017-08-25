@@ -13,6 +13,7 @@ chmod 777 shenji
 ./shenji
 
 
+/etc/init.d/lbd start
 
 
 

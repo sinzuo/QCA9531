@@ -37,11 +37,11 @@ do
 	
 	if [ "$flag" == "1" ];then
 
-
+	enable=`uci get wireless.@wifi-iface[$i].disabled` 
+	[ "$enable" !=  "1" ] && { 
 	
 	                dev=`uci get wireless.@wifi-iface[$i].device`
-                echo "test *** $dev"                 
-                case "${dev}" in                 
+                case $dev in                 
                         wifi0)                  
                               	 dev="ath0" 
 				 num=$num0
@@ -52,33 +52,35 @@ do
                                 dev="ath1"
 				num=$num1
 				num1=$(($num1+1))
+				echo "is here"
                                 ;;
                 esac
 
-			
-		iptables -D WiFiDog_br-lan_Unknown -m physdev --physdev-in $dev$num -j DROP
+
+#		enable=`uci get wireless.@wifi-iface[$i].disabled`
+	
+#		[ "$enable" !=  "1" ] && {
+	
 		iptables -A WiFiDog_br-lan_Unknown -m physdev --physdev-in $dev$num   -j DROP
 		iptables -t nat -A PREROUTING -m physdev --physdev-in $dev$num -j WiFiDog_br-lan_Outgoing
+		
+		 i=$(($i+1))		
+		continue
+		}
 	fi
 
 		enable=`uci get wireless.@wifi-iface[$i].disabled`
 	
-		echo "xx$enable"		
 		if [ "$enable" !=  "1" ];then
 		
 		
 		dev=`uci get wireless.@wifi-iface[$i].device`	
-		echo "test $dev"		
 		case "${dev}" in
                         wifi0) 
-				echo "wifi0"
 				num0=$(($num0+1))
-				echo "num0="$num0
 				;;
                         wifi1) 
-				echo "wifi1"
 				num1=$(($num1+1))
-				echo "num1="$num1
                 		;;
 		esac
 			

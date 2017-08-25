@@ -1,0 +1,203 @@
+#!/usr/bin/lua
+require "luci.model.uci"
+local uci = luci.model.uci.cursor()
+local json=require("luci.json")
+
+local function split(str, delimiter)
+    local fs = delimiter
+    if not fs or "" == string.gsub(fs," ","") then
+                fs="%s"
+        end
+    if str==nil or str=="" or delimiter==nil then
+        return nil
+    end
+
+    local result = {}
+        for match in string.gmatch((str..delimiter),"[^"..fs.."]+") do
+        table.insert(result, match)
+    end
+    return result
+end
+
+
+local function get_scan(cmd)
+    local res = {}
+    local str = ""
+    local i=1
+    local sum=0
+    local fd = io.popen(cmd, "r")
+    local row = nil
+    local line = nil
+    local mac="" 
+    local ssid=""
+    local ch=""
+    local sign=""
+    while true do
+        line = nil
+        line = fd:read("*l")
+        if not line or #line==0 then break end
+        if 1 == i then 
+            row=split(line," ")
+            mac= string.gsub(row[5],"\"","") 
+        end 
+        if 2 == i then 
+            row=split(line," ")
+            ssid= string.gsub(row[2],"\"","") 
+        end 
+        if 3 == i then 
+            row=split(line," ")
+            ch= string.gsub(row[4],"\"","") 
+        end 
+        if 4 == i then 
+            row=split(line," ")
+            i=0
+            sign=string.gsub(row[2],"\"","") 
+            if -76 < sign + 0 then 
+                local al={ssid=ssid,channel=ch,sign=sign}
+                res[mac] = al 
+                sum=sum+1
+            end
+        end 
+        i=i+1
+    end
+    fd:close()
+    return res
+end
+
+function get_chWeight(aplist ,cht)
+    if not aplist or not cht then
+        return nil 
+    end
+    local ch=nil
+    for k,v in pairs(aplist) do
+        ch=v["channel"]
+        if ch then
+            if -1 == cht[ch] + 0 then
+                cht[ch] = 100 + v["sign"]
+            else
+                cht[ch] = cht[ch] + (100 - v["sign"])
+            end
+        end     
+    end
+    return cht
+end
+
+function get_goodchannel2(chWeight)
+    if not chWeight then 
+        return nil 
+    end
+    local w=chWeight["1"]
+    local ch="1"
+    for k,v in pairs(chWeight) do
+        if v < w then
+            w = v
+            ch = k
+        end  
+    end
+    return ch
+end
+
+function get_goodchannel5(chWeight)
+    if not chWeight then 
+        return nil 
+    end
+    local w=chWeight["157"]
+    local ch="157"
+    for k,v in pairs(chWeight) do
+        if v < w then
+            w = v
+            ch = k
+        end  
+    end
+    return ch
+end
+
+------main--------
+local reboot_wifi_flag=false
+----2.4G----------
+local cht2={
+         ["1"] = -1,
+         ["2"] = -1,
+         ["3"] = -1,
+         ["4"] = -1,
+         ["5"] = -1,
+         ["6"] = -1,
+         ["7"] = -1,
+         ["8"] = -1,
+         ["9"] = -1,
+         ["10"] = -1,
+         ["11"] = -1,
+         ["12"] = -1,
+         ["13"] = -1,
+}
+local ch2 = uci.get("wireless","wifi0","channel")
+if ch2 and "auto" == ch2 then
+    local cmd2='iwinfo ath0 scan 2>/dev/null | grep -e "Address" -e "ESSID" -e "Channel" -e "Signal"'
+    local country = uci.get("wireless","wifi0","country")
+    if not country or "US" == country then
+        cht2["12"] = nil
+        cht2["13"] = nil
+    end
+    local aplist=get_scan(cmd2)
+    local wlist = get_chWeight(aplist,cht2)
+    --print(json.encode(wlist))
+    local gch=get_goodchannel2(wlist)
+    --print(gch)
+    if gch and cht2[gch] then
+        os.execute("iwconfig ath0 channel "..gch.." >/dev/null 2>/dev/null")
+    end
+end
+----5.8G----------
+local ch5 = uci.get("wireless","wifi1","channel")
+if ch5 and "auto" == ch5 then
+    local country = uci.get("wireless","wifi1","country")
+    local cmd5='iwinfo ath1 scan 2>/dev/null | grep -e "Address" -e "ESSID" -e "Channel" -e "Signal"'
+    local cht5=nil
+    if country and "CN" == country then
+        cht5={
+            ["149"]=-1,
+            ["153"]=-1,
+            ["157"]=-1,
+            ["161"]=-1,
+            ["165"]=-1 
+        }
+    else
+        cht5={
+            ["36"]=-1,
+            ["40"]=-1,
+            ["44"]=-1,
+            ["48"]=-1,
+            ["52"]=-1,
+            ["56"]=-1,
+            ["60"]=-1,
+            ["64"]=-1,
+            ["100"]=-1,
+            ["104"]=-1,
+            ["108"]=-1,
+            ["112"]=-1,
+            ["116"]=-1,
+            ["120"]=-1,
+            ["124"]=-1,
+            ["128"]=-1,
+            ["132"]=-1,
+            ["136"]=-1,
+            ["140"]=-1,
+            ["149"]=-1,
+            ["153"]=-1,
+            ["157"]=-1,
+            ["161"]=-1,
+            ["165"]=-1 
+        }
+    end
+    
+    aplist=get_scan(cmd5)
+    wlist = get_chWeight(aplist,cht5)
+    --print(json.encode(wlist))
+    gch=get_goodchannel5(wlist)
+    --print(gch)
+    
+    if gch and cht5[gch] then
+        os.execute("iwconfig ath1 channel "..gch.." >/dev/null 2>/dev/null")
+    end
+
+end
