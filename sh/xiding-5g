@@ -45,3 +45,5 @@ t=`date +%Y-%m-%d-%H-%M-%S`
 
 /home/ayuchou/work/9531/openwrt/staging_dir/host/bin/padjffs2 /home/ayuchou/work/9531/openwrt/bin/ar71xx/ap147-5G-xiding-$1.bin 4 8 16 64 128 256
 
+
+cp /home/ayuchou/work/9531/openwrt/bin/ar71xx/ap147-5G-xiding-$1.bin /home/ayuchou/work/9531/openwrt/bin/ar71xx/$1.bin
