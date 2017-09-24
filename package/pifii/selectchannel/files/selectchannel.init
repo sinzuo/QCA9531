@@ -1,9 +1,0 @@
-#!/bin/sh /etc/rc.common
-
-START=99
-
-local pro="/usr/sbin/selectchannel"
-
-start(){
-    test -f "$pro" && lua "$pro" &
-}
