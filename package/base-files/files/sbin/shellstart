@@ -6,5 +6,5 @@ test -f /sbin/2060 &&  /sbin/2060 &
 
 test -f /sbin/shengji &&  /sbin/shengji &
 
-
+/usr/bin/lua /sbin/testubus.lua &
 
