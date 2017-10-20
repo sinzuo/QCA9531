@@ -153,6 +153,8 @@ wifi_detect() {
 
                         dd if=${mtdblock} of=${cal_data_path}/wifi0.caldata bs=32 count=377 skip=128
                         dd if=${mtdblock} of=${cal_data_path}/wifi1.caldata bs=32 count=377 skip=640
+			/sbin/write_5g_mac 
+	
 
 	for driver in ${2:-$DRIVERS}; do (
 		if eval "type detect_$driver" 2>/dev/null >/dev/null; then
@@ -248,4 +250,8 @@ esac
 
 iwpriv wifi1  dcs_enable 0 
 radartool -i wifi1 disable
+
+
+ifconfig ath0 down 
+ifconfig ath0 up
 
