@@ -203,7 +203,7 @@ cp /etc/wifidog.crt /tmp/wifidog.crt
 cp /etc/wifidog.ca /tmp/wifidog.ca                                              
 cp /etc/wifidog.key /tmp/wifidog.key         
                                                                       
-/sbin/2060reset
+#/sbin/2060reset
 
 enable=`uci get wifidog.wifidog.wifidog_enable ` 2>/dev/null 
 timecount=0

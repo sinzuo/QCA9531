@@ -5,5 +5,5 @@ killall -9 wifidog
 
 /etc/init.d/firewall restart 
 
-
+sleep 5
 
