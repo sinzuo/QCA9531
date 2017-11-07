@@ -2,17 +2,6 @@
 #
 # Copyright (c) 2014, 2016, The Linux Foundation. All rights reserved.
 #
-#  Permission to use, copy, modify, and/or distribute this software for any
-#  purpose with or without fee is hereby granted, provided that the above
-#  copyright notice and this permission notice appear in all copies.
-#
-#  THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
-#  WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
-#  MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
-#  ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
-#  WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
-#  ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
-#  OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 append DRIVERS "qcawifi"
 
@@ -144,27 +133,6 @@ set_default_country() {
 	return 0
 }
 
-is_low_mem_system() {
-	local board_name
-	[ -f /tmp/sysinfo/board_name ] && {
-		board_name=$(cat /tmp/sysinfo/board_name)
-	}
-	memtotal=$(grep MemTotal /proc/meminfo | awk '{print $2}')
-
-	case "$board_name" in
-		ap-dk01.1-c1 | ap-dk01.1-c2 | ap-dk04.1-c1 | ap-dk04.1-c2 | ap-dk04.1-c3)
-			if [ $memtotal -le 131072 ]; then
-				echo "true"
-			else
-				echo "false"
-			fi
-		;;
-
-		*) echo "false"
-		;;
-	esac
-}
-
 config_low_targ_clkspeed() {
         local board_name
         [ -f /tmp/sysinfo/board_name ] && {
@@ -213,48 +181,62 @@ config_tx_fc_buf() {
 load_qcawifi() {
 	lock /var/run/wifilock
 	local umac_args
-	local adf_args
+	local qdf_args
+	local ol_args
         local cfg_low_targ_clkspeed
 	local qca_da_needed=0
+	local qca_ol_needed=0
 	local device
 	local board_name
-        [ -f /tmp/sysinfo/board_name ] && {
-                board_name=$(cat /tmp/sysinfo/board_name)
-        }
+	local def_pktlog_support=1
+	local ath_dev_args
 
-	low_mem_system=$(is_low_mem_system)
-	if [ $low_mem_system = "true" ]; then
-		echo 1 > /proc/net/skb_recycler/max_skbs
-		echo 1 > /proc/net/skb_recycler/max_spare_skbs
-		append umac_args "low_mem_system=1"
-	fi
+	[ -f /tmp/sysinfo/board_name ] && {
+		board_name=$(cat /tmp/sysinfo/board_name)
+	}
+	memtotal=$(grep MemTotal /proc/meminfo | awk '{print $2}')
+
+	case "$board_name" in
+		ap-dk01.1-c1 | ap-dk01.1-c2 | ap-dk04.1-c1 | ap-dk04.1-c2 | ap-dk04.1-c3)
+			if [ $memtotal -le 131072 ]; then
+				echo 1 > /proc/net/skb_recycler/max_skbs
+				echo 1 > /proc/net/skb_recycler/max_spare_skbs
+				append umac_args "low_mem_system=1"
+			fi
+		;;
+		ap152 | ap147 | ap151 | ap135 | ap137)
+			if [ $memtotal -le 66560 ]; then
+				def_pktlog_support=0
+			fi
+		;;
+	esac
 
 	config_get_bool testmode qcawifi testmode
-	[ -n "$testmode" ] && append umac_args "testmode=$testmode"
+	[ -n "$testmode" ] && append ol_args "testmode=$testmode"
 
 	config_get vow_config qcawifi vow_config
-	[ -n "$vow_config" ] && append umac_args "vow_config=$vow_config"
+	[ -n "$vow_config" ] && append ol_args "vow_config=$vow_config"
 
 	config_get ol_bk_min_free qcawifi ol_bk_min_free
-	[ -n "$ol_bk_min_free" ] && append umac_args "OL_ACBKMinfree=$ol_bk_min_free"
+	[ -n "$ol_bk_min_free" ] && append ol_args "OL_ACBKMinfree=$ol_bk_min_free"
 
 	config_get ol_be_min_free qcawifi ol_be_min_free
-	[ -n "$ol_be_min_free" ] && append umac_args "OL_ACBEMinfree=$ol_be_min_free"
+	[ -n "$ol_be_min_free" ] && append ol_args "OL_ACBEMinfree=$ol_be_min_free"
 
 	config_get ol_vi_min_free qcawifi ol_vi_min_free
-	[ -n "$ol_vi_min_free" ] && append umac_args "OL_ACVIMinfree=$ol_vi_min_free"
+	[ -n "$ol_vi_min_free" ] && append ol_args "OL_ACVIMinfree=$ol_vi_min_free"
 
 	config_get ol_vo_min_free qcawifi ol_vo_min_free
-	[ -n "$ol_vo_min_free" ] && append umac_args "OL_ACVOMinfree=$ol_vo_min_free"
+	[ -n "$ol_vo_min_free" ] && append ol_args "OL_ACVOMinfree=$ol_vo_min_free"
 
 	config_get_bool ar900b_emu qcawifi ar900b_emu
-	[ -n "$ar900b_emu" ] && append umac_args "ar900b_emu=$ar900b_emu"
+	[ -n "$ar900b_emu" ] && append ol_args "ar900b_emu=$ar900b_emu"
 
 	config_get frac qcawifi frac
-	[ -n "$frac" ] && append umac_args "frac=$frac"
+	[ -n "$frac" ] && append ol_args "frac=$frac"
 
 	config_get intval qcawifi intval
-	[ -n "$intval" ] && append umac_args "intval=$intval"
+	[ -n "$intval" ] && append ol_args "intval=$intval"
 
 	config_get atf_mode qcawifi atf_mode
 	[ -n "$atf_mode" ] && append umac_args "atf_mode=$atf_mode"
@@ -269,57 +251,65 @@ load_qcawifi() {
         [ -n "$atf_max_vdevs" ] && append umac_args "atf_max_vdevs=$atf_max_vdevs"
 
 	config_get fw_dump_options qcawifi fw_dump_options
-	[ -n "$fw_dump_options" ] && append umac_args "fw_dump_options=$fw_dump_options"
+	[ -n "$fw_dump_options" ] && append ol_args "fw_dump_options=$fw_dump_options"
 
 	config_get enableuartprint qcawifi enableuartprint
-	[ -n "$enableuartprint" ] && append umac_args "enableuartprint=$enableuartprint"
+	[ -n "$enableuartprint" ] && append ol_args "enableuartprint=$enableuartprint"
 
 	config_get ar900b_20_targ_clk qcawifi ar900b_20_targ_clk
-	[ -n "$ar900b_20_targ_clk" ] && append umac_args "ar900b_20_targ_clk=$ar900b_20_targ_clk"
+	[ -n "$ar900b_20_targ_clk" ] && append ol_args "ar900b_20_targ_clk=$ar900b_20_targ_clk"
 
 	config_get qca9888_20_targ_clk qcawifi qca9888_20_targ_clk
-	[ -n "$qca9888_20_targ_clk" ] && append umac_args "qca9888_20_targ_clk=$qca9888_20_targ_clk"
+	[ -n "$qca9888_20_targ_clk" ] && append ol_args "qca9888_20_targ_clk=$qca9888_20_targ_clk"
 
         cfg_low_targ_clkspeed=$(config_low_targ_clkspeed)
-        [ -z "$qca9888_20_targ_clk" ] && [ $cfg_low_targ_clkspeed = "true" ] && append umac_args "qca9888_20_targ_clk=300000000"
+        [ -z "$qca9888_20_targ_clk" ] && [ $cfg_low_targ_clkspeed = "true" ] && append ol_args "qca9888_20_targ_clk=300000000"
 
 	config_get max_descs qcawifi max_descs
-	[ -n "$max_descs" ] && append umac_args "max_descs=$max_descs"
+	[ -n "$max_descs" ] && append ol_args "max_descs=$max_descs"
 
 	config_get max_peers qcawifi max_peers
-	[ -n "$max_peers" ] && append umac_args "max_peers=$max_peers"
+	[ -n "$max_peers" ] && append ol_args "max_peers=$max_peers"
 
 	config_get qwrap_enable qcawifi qwrap_enable
-	[ -n "$qwrap_enable" ] && append umac_args "qwrap_enable=$qwrap_enable"
+	[ -n "$qwrap_enable" ] && append ol_args "qwrap_enable=$qwrap_enable"
 
 	config_get otp_mod_param qcawifi otp_mod_param
-	[ -n "$otp_mod_param" ] && append umac_args "otp_mod_param=$otp_mod_param"
+	[ -n "$otp_mod_param" ] && append ol_args "otp_mod_param=$otp_mod_param"
 
 	config_get max_active_peers qcawifi max_active_peers
-	[ -n "$max_active_peers" ] && append umac_args "max_active_peers=$max_active_peers"
+	[ -n "$max_active_peers" ] && append ol_args "max_active_peers=$max_active_peers"
 
 	config_get enable_smart_antenna qcawifi enable_smart_antenna
-	[ -n "$enable_smart_antenna" ] && append umac_args "enable_smart_antenna=$enable_smart_antenna"
+	[ -n "$enable_smart_antenna" ] && append ol_args "enable_smart_antenna=$enable_smart_antenna"
 
 	config_get nss_wifi_olcfg qcawifi nss_wifi_olcfg
 	if [ -n "$nss_wifi_olcfg" ]; then
-		append umac_args "nss_wifi_olcfg=$nss_wifi_olcfg"
+		append ol_args "nss_wifi_olcfg=$nss_wifi_olcfg"
 	elif [ -f /lib/wifi/wifi_nss_olcfg ]; then
 		nss_wifi_olcfg="$(cat /lib/wifi/wifi_nss_olcfg)"
-		[ $nss_wifi_olcfg != 0 ] && append umac_args "nss_wifi_olcfg=$nss_wifi_olcfg"
+
+		if [ $nss_wifi_olcfg != 0 ]; then
+			if [ -f /lib/wifi/wifi_nss_override ] && [ $(cat /lib/wifi/wifi_nss_override) = 1 ]; then
+				echo "NSS offload disabled due to unsupported config" >&2
+				append ol_args "nss_wifi_olcfg=0"
+			else
+				append ol_args "nss_wifi_olcfg=$nss_wifi_olcfg"
+			fi
+		fi
 	fi
 
 	config_get max_clients qcawifi max_clients
-	[ -n "$max_clients" ] && append umac_args "max_clients=$max_clients"
+	[ -n "$max_clients" ] && append ol_args "max_clients=$max_clients"
 
 	config_get max_vaps qcawifi max_vaps
-	[ -n "$max_vaps" ] && append umac_args "max_vaps=$max_vaps"
+	[ -n "$max_vaps" ] && append ol_args "max_vaps=$max_vaps"
 
 	config_get enable_smart_antenna_da qcawifi enable_smart_antenna_da
 	[ -n "$enable_smart_antenna_da" ] && append umac_args "enable_smart_antenna_da=$enable_smart_antenna_da"
 
 	config_get prealloc_disabled qcawifi prealloc_disabled
-	[ -n "$prealloc_disabled" ] && append adf_args "prealloc_disabled=$prealloc_disabled"
+	[ -n "$prealloc_disabled" ] && append qdf_args "prealloc_disabled=$prealloc_disabled"
 
 	if [ -n "$nss_wifi_olcfg" ] && [ "$nss_wifi_olcfg" != "0" ]; then
 		sysctl dev.nss.n2hcfg.n2h_high_water_core0 >/dev/null 2>/dev/null
@@ -327,19 +317,19 @@ load_qcawifi() {
 		if [ "$nss_wifi_olnum" == "2" ]; then
 		    sysctl -w dev.nss.n2hcfg.extra_pbuf_core0=5939200 >/dev/null 2>/dev/null
 		    sysctl -w dev.nss.n2hcfg.n2h_high_water_core0=59392 >/dev/null 2>/dev/null
-		    sysctl -w dev.nss.n2hcfg.n2h_wifi_pool_buf=36608 >/dev/null 2>/dev/null
+		    sysctl -w dev.nss.n2hcfg.n2h_wifi_pool_buf=35584 >/dev/null 2>/dev/null
 		else
 		    sysctl -w dev.nss.n2hcfg.extra_pbuf_core0=4096000 >/dev/null 2>/dev/null
 		    sysctl -w dev.nss.n2hcfg.n2h_high_water_core0=43008 >/dev/null 2>/dev/null
-		    sysctl -w dev.nss.n2hcfg.n2h_wifi_pool_buf=20224 >/dev/null 2>/dev/null
+		    sysctl -w dev.nss.n2hcfg.n2h_wifi_pool_buf=19200 >/dev/null 2>/dev/null
 		fi
 	fi
 
 	config_get lteu_support qcawifi lteu_support
-	[ -n "$lteu_support" ] && append umac_args "lteu_support=$lteu_support"
+	[ -n "$lteu_support" ] && append ol_args "lteu_support=$lteu_support"
 
 	config_get enable_mesh_support qcawifi enable_mesh_support
-	[ -n "$enable_mesh_support" ] && append umac_args "enable_mesh_support=$enable_mesh_support"
+	[ -n "$enable_mesh_support" ] && append ol_args "enable_mesh_support=$enable_mesh_support"
 
 
     if [ -n "$enable_mesh_support" ]
@@ -347,12 +337,12 @@ load_qcawifi() {
         config_get enable_mesh_peer_cap_update qcawifi enable_mesh_peer_cap_update
         [ -n "$enable_mesh_peer_cap_update" ] && append umac_args "enable_mesh_peer_cap_update=$enable_mesh_peer_cap_update"
     fi
-# The internal direct attach radio should always be wifi0
-	case "$board_name" in
-                ap152 | ap147 | ap151 | ap135 | ap137)
-			append umac_args "wifi_start_idx=1"
-		;;
-	esac
+
+	config_get enable_pktlog_support qcawifi enable_pktlog_support $def_pktlog_support
+	[ -n "$enable_pktlog_support" ] && append umac_args "enable_pktlog_support=$enable_pktlog_support"
+
+	config_get paprd_enable qcawifi paprd_enable
+	[ -n "$paprd_enable" ] && append ath_dev_args "paprd_enable=$paprd_enable"
 
 	for mod in $(cat /lib/wifi/qca-wifi-modules); do
 		case ${mod} in
@@ -365,15 +355,45 @@ load_qcawifi() {
 				}
 			};;
 
-			adf) [ -d /sys/module/${mod} ] || { \
-				insmod ${mod} ${adf_args} || { \
+			qdf) [ -d /sys/module/${mod} ] || { \
+				insmod ${mod} ${qdf_args} || { \
 					lock -u /var/run/wifilock
 					unload_qcawifi
 					return 1
 				}
 			};;
 
-			qca_da|ath_dev|hst_tx99|ath_rate_atheros|ath_hal) [ -f /tmp/no_qca_da ] || { \
+			qca_ol) [ -f /tmp/no_qca_ol ] || { \
+					[ -d /sys/module/${mod} ] || { \
+					insmod ${mod} ${ol_args} || { \
+						lock -u /var/run/wifilock
+						unload_qcawifi
+						return 1
+					}
+				}
+			};;
+
+			ath_dev) [ -f /tmp/no_qca_da ] || { \
+				[ -d /sys/module/${mod} ] || { \
+					insmod ${mod} ${ath_dev_args} || { \
+						lock -u /var/run/wifilock
+						unload_qcawifi
+						return 1
+					}
+				}
+			};;
+
+			qca_da|hst_tx99|ath_rate_atheros|ath_hal) [ -f /tmp/no_qca_da ] || { \
+				[ -d /sys/module/${mod} ] || { \
+					insmod ${mod} || { \
+						lock -u /var/run/wifilock
+						unload_qcawifi
+						return 1
+					}
+				}
+			};;
+
+			ath_pktlog) [ $enable_pktlog_support -eq 0 ] || { \
 				[ -d /sys/module/${mod} ] || { \
 					insmod ${mod} || { \
 						lock -u /var/run/wifilock
@@ -394,13 +414,23 @@ load_qcawifi() {
 		esac
 	done
 
-       # Remove DA modules, if no DA chipset found
+       # Remove DA/OL modules, if no DA/OL chipset found
 	for device in $(ls -d /sys/class/net/wifi* 2>&-); do
 		[[ -f $device/is_offload ]] || {
 			qca_da_needed=1
-			break
+		}
+		[[ -f $device/is_offload ]] && {
+			qca_ol_needed=1
 		}
 	done
+
+	if [ $qca_ol_needed -eq 0 ]; then
+		if [ ! -f /tmp/no_qca_ol ]; then
+			echo "No offload chipsets found." >/dev/console
+			rmmod qca_ol > /dev/null 2> /dev/null
+			cat "1" > /tmp/no_qca_ol
+		fi
+	fi
 
 	if [ $qca_da_needed -eq 0 ]; then
 		if [ ! -f /tmp/no_qca_da ]; then
@@ -431,11 +461,19 @@ unload_qcawifi() {
 	lock -u /var/run/wifilock
 }
 
+disable_recover_qcawifi() {
+	disable_qcawifi $@ 1
+}
+
+enable_recover_qcawifi() {
+	enable_qcawifi $@ 1
+}
 
 disable_qcawifi() {
 	local device="$1"
 	local parent
 	local retval=0
+	local recover="$2"
 
 	echo "$DRIVERS disable radio $1" >/dev/console
 
@@ -470,7 +508,9 @@ disable_qcawifi() {
 				}
 				ifconfig "$dev" down
 				unbridge "$dev"
-				wlanconfig "$dev" destroy
+				if [ -z "$recover" ] || [ "$recover" -eq "0" ]; then
+				    wlanconfig "$dev" destroy
+				fi
 			}
 			[ -f /var/run/hostapd_cred_${device}.bin ] && { \
 				rm /var/run/hostapd_cred_${device}.bin
@@ -485,11 +525,66 @@ enable_qcawifi() {
 	local device="$1"
 	local count=0
 	echo "$DRIVERS: enable radio $1" >/dev/console
-
+	local num_radio_instamode=0
+	local recover="$2"
+	local wlan_id_num=1
 	load_qcawifi
 
 	find_qcawifi_phy "$device" || return 1
+
+	if [ ! -f /lib/wifi/wifi_nss_override ]; then
+		if [ -f /lib/wifi/wifi_nss_olcfg ] && [ $(cat /lib/wifi/wifi_nss_olcfg) != 0 ]; then
+			touch /lib/wifi/wifi_nss_override
+			echo 0 > /lib/wifi/wifi_nss_override
+		fi
+	fi
+
+	if [ -f /lib/wifi/wifi_nss_override ]; then
+		cd /sys/class/net
+		for all_device in $(ls -d wifi* 2>&-); do
+			config_get_bool disabled "$all_device" disabled 0
+			[ $disabled = 0 ] || continue
+			config_get vifs "$all_device" vifs
+
+			for vif in $vifs; do
+				config_get mode "$vif" mode
+				if [ $mode = "sta" ]; then
+					num_radio_instamode=$(($num_radio_instamode + 1))
+					break
+				fi
+			done
+			if [ $num_radio_instamode = "0" ]; then
+				break
+			fi
+		done
+
+		nss_override="$(cat /lib/wifi/wifi_nss_override)"
+		if [ $num_radio_instamode = "3" ]; then
+			config_get nss_wifi_olcfg qcawifi nss_wifi_olcfg
+			if [ -n "$nss_wifi_olcfg" ] && [ $nss_wifi_olcfg != 0 ]; then
+				echo " Invalid Configuration: 3 stations in offload not supported"
+				return 1
+			fi
+			if [ $nss_override = "0" ]; then
+				echo 1 > /lib/wifi/wifi_nss_override
+				unload_qcawifi
+				device=$1
+				load_qcawifi
+			fi
+		else
+			if [ $nss_override != "0" ]; then
+				echo 0 > /lib/wifi/wifi_nss_override
+				unload_qcawifi
+				device=$1
+				load_qcawifi
+			fi
+		fi
+	fi
+
 	config_get phy "$device" phy
+
+	config_get preCACEn "$device" preCACEn
+	[ -n "$preCACEn" ] && iwpriv "$phy" preCACEn "$preCACEn"
 
 	config_get country "$device" country
 	if [ -z "$country" ]; then
@@ -660,6 +755,10 @@ enable_qcawifi() {
 	config_get dscp_tid_map "$device" dscp_tid_map
 	[ -n "$dscp_tid_map" ] && iwpriv "$phy" set_dscp_tid_map $dscp_tid_map
 
+        #Default enable IGMP overide & TID=6
+	iwpriv "$phy" sIgmpDscpOvrid 1
+	iwpriv "$phy" sIgmpDscpTidMap 6
+
 	config_get_bool igmp_dscp_ovride "$device" igmp_dscp_ovride
 	[ -n "$igmp_dscp_ovride" ] && iwpriv "$phy" sIgmpDscpOvrid "$igmp_dscp_ovride"
 
@@ -752,7 +851,7 @@ enable_qcawifi() {
 	[ -n "$obss_rssi_th" ] && iwpriv "$phy" obss_rssi_th "${obss_rssi_th}"
 
 	config_get obss_rx_rssi_th "$device" obss_rx_rssi_th 35
-	[ -n "$obss_rx_rssi_th" ] && iwpriv "$phy" obss_rx_rssi_th "${obss_rx_rssi_th}"
+	[ -n "$obss_rx_rssi_th" ] && iwpriv "$phy" obss_rxrssi_th "${obss_rx_rssi_th}"
 
         config_get acs_txpwr_opt "$device" acs_txpwr_opt
         [ -n "$acs_txpwr_opt" ] && iwpriv "$phy" acs_tcpwr_opt "${acs_txpwr_opt}"
@@ -784,13 +883,34 @@ enable_qcawifi() {
         config_get no_vlan "$device" no_vlan
         [ -n "$no_vlan" ] && iwpriv "$phy" no_vlan "${no_vlan}"
 
+        config_get btcoex_wl_pri "$device" btcoex_wl_pri
+        [ -n "$btcoex_wl_pri" ] && iwpriv "$phy" btcoex_wl_pri "${btcoex_wl_pri}"
+
+        config_get btcoex_enable "$device" btcoex_enable
+        [ -n "$btcoex_enable" ] && iwpriv "$phy" btcoex_enable "${btcoex_enable}"
+
+        config_get btcoex_dc "$device" btcoex_dc
+        [ -n "$btcoex_dc" ] && iwpriv "$phy" btcoex_dc "${btcoex_dc}"
+
+        config_get ul_hyst "$device" ul_hyst
+        [ -n "$ul_hyst" ] && iwpriv "$phy" ul_hyst "${ul_hyst}"
+
+        config_get discon_time qcawifi discon_time 10
+        [ -n "$discon_time" ] && iwpriv "$phy" discon_time "${discon_time}"
+
+        config_get reconfig_time qcawifi reconfig_time 60
+        [ -n "$reconfig_time" ] && iwpriv "$phy" reconfig_time "${reconfig_time}"
+
+        config_get alwaysprimary qcawifi alwaysprimary
+        [ -n "$alwaysprimary" ] && iwpriv "$phy" alwaysprimary "${alwaysprimary}"
+
 	if [ -f /lib/wifi/wifi_nss_olcfg ]; then
 		nss_wifi_olcfg="$(cat /lib/wifi/wifi_nss_olcfg)"
 		if [ $nss_wifi_olcfg != 0 ]; then
 			config_get hwmode "$device" hwmode auto
 			case "$hwmode" in
 				*ng)
-					iwpriv "$phy" fc_buf0_max 4096
+					iwpriv "$phy" fc_buf0_max 5120
 					iwpriv "$phy" fc_buf1_max 8192
 					iwpriv "$phy" fc_buf2_max 12288
 					iwpriv "$phy" fc_buf3_max 16384
@@ -802,7 +922,7 @@ enable_qcawifi() {
 					iwpriv "$phy" fc_buf3_max 32768
 					;;
 				*)
-					iwpriv "$phy" fc_buf0_max 4096
+					iwpriv "$phy" fc_buf0_max 5120
 					iwpriv "$phy" fc_buf1_max 8192
 					iwpriv "$phy" fc_buf2_max 12288
 					iwpriv "$phy" fc_buf3_max 16384
@@ -893,12 +1013,15 @@ enable_qcawifi() {
 
 		[ "$nosbeacon" = 1 ] || nosbeacon=""
 		[ -n "${DEBUG}" ] && echo wlanconfig "$ifname" create wlandev "$phy" wlanmode "$wlanmode" ${wlanaddr:+wlanaddr "$wlanaddr"} ${nosbeacon:+nosbeacon}
-		ifname=$(/usr/sbin/wlanconfig "$ifname" create wlandev "$phy" wlanmode "$wlanmode" ${wlanaddr:+wlanaddr "$wlanaddr"} ${nosbeacon:+nosbeacon})
-		[ $? -ne 0 ] && {
-			echo "enable_qcawifi($device): Failed to set up $mode vif $ifname" >&2
-			continue
-		}
-		config_set "$vif" ifname "$ifname"
+		if [ -z "$recover" ] || [ "$recover" -eq "0" ]; then
+			ifname=$(/usr/sbin/wlanconfig "$ifname" create wlandev "$phy" wlanmode "$wlanmode" ${wlanaddr:+wlanaddr "$wlanaddr"} ${nosbeacon:+nosbeacon})
+			[ $? -ne 0 ] && {
+				echo "enable_qcawifi($device): Failed to set up $mode vif $ifname" >&2
+				continue
+			}
+			config_set "$vif" ifname "$ifname"
+		fi
+
 
 		config_get hwmode "$device" hwmode auto
 		config_get htmode "$device" htmode auto
@@ -950,26 +1073,30 @@ enable_qcawifi() {
 		config_get puren "$vif" puren
 		[ -n "$puren" ] && iwpriv "$ifname" puren "$puren"
 
+
+
 		iwconfig "$ifname" channel "$channel" >/dev/null 2>/dev/null
 
 		config_get_bool hidden "$vif" hidden 0
 		iwpriv "$ifname" hide_ssid "$hidden"
+
+                config_get_bool dynamicbeacon "$vif" dynamicbeacon 0
+                [ $hidden = 1 ] && iwpriv "$ifname" dynamicbeacon "$dynamicbeacon"
+
+                config_get db_rssi_thr "$vif" db_rssi_thr
+                [ -n "$db_rssi_thr" ] && iwpriv "$ifname" db_rssi_thr "$db_rssi_thr"
+
+                config_get db_timeout "$vif" db_timeout
+                [ -n "$db_timeout" ] && iwpriv "$ifname" db_timeout "$db_timeout"
+
+                config_get nrshareflag "$vif" nrshareflag
+                [ -n "$nrshareflag" ] && iwpriv "$ifname" nrshareflag "$nrshareflag"
 
 		config_get_bool shortgi "$vif" shortgi 1
 		[ -n "$shortgi" ] && iwpriv "$ifname" shortgi "${shortgi}"
 
 		config_get_bool disablecoext "$vif" disablecoext
 		[ -n "$disablecoext" ] && iwpriv "$ifname" disablecoext "${disablecoext}"
-
-
-         case "$htmode" in                                                        
-                HT40)                                                             
-                        iwpriv "$ifname" disablecoext 0                           
-                        iwpriv "$ifname" mode 11NAHT40PLUS                        
-                        ;;                                                        
-                esac
-
-
 
 		config_get chwidth "$vif" chwidth
 		[ -n "$chwidth" ] && iwpriv "$ifname" chwidth "${chwidth}"
@@ -980,6 +1107,9 @@ enable_qcawifi() {
 			*) wds=0;;
 		esac
 		iwpriv "$ifname" wds "$wds" >/dev/null 2>&1
+
+		config_get  backhaul "$vif" backhaul 0
+                iwpriv "$ifname" backhaul "$backhaul" >/dev/null 2>&1
 
 		config_get TxBFCTL "$vif" TxBFCTL
 		[ -n "$TxBFCTL" ] && iwpriv "$ifname" TxBFCTL "$TxBFCTL"
@@ -1003,7 +1133,7 @@ enable_qcawifi() {
 				esac
 				for idx in 1 2 3 4; do
 					config_get key "$vif" "key${idx}"
-					iwconfig "$ifname" enc "[$idx]" "${key:-off}"
+					[ -n "$key" ] && iwconfig "$ifname"  enc "[$idx]" "$key"
 				done
 				config_get key "$vif" key
 				key="${key:-1}"
@@ -1131,6 +1261,12 @@ enable_qcawifi() {
 
 		config_get wnm "$vif" wnm
 		[ -n "$wnm" ] && iwpriv "$ifname" wnm "$wnm"
+
+		config_get mbo "$vif" mbo
+		[ -n "$mbo" ] && iwpriv "$ifname" mbo "$mbo"
+
+		config_get oce "$vif" oce
+		[ -n "$oce" ] && iwpriv "$ifname" oce "$oce"
 
 		config_get ampdu "$vif" ampdu
 		[ -n "$ampdu" ] && iwpriv "$ifname" ampdu "$ampdu"
@@ -1386,6 +1522,15 @@ enable_qcawifi() {
 		config_get_bool ext_ifu_acs "$vif" ext_ifu_acs
 		[ -n "$ext_ifu_acs" ] && iwpriv "$ifname" ext_ifu_acs "$ext_ifu_acs"
 
+		config_get_bool enable_rtt "$vif" enable_rtt
+		[ -n "$enable_rtt" ] && iwpriv "$ifname" enable_rtt "$enable_rtt"
+
+		config_get_bool enable_lci "$vif" enable_lci
+		[ -n "$enable_lci" ] && iwpriv "$ifname" enable_lci "$enable_lci"
+
+		config_get_bool enable_lcr "$vif" enable_lcr
+		[ -n "$enable_lcr" ] && iwpriv "$ifname" enable_lcr "$enable_lcr"
+
 		config_get_bool rrm "$vif" rrm
 		[ -n "$rrm" ] && iwpriv "$ifname" rrm "$rrm"
 
@@ -1498,6 +1643,12 @@ enable_qcawifi() {
 		config_get re_scalingfactor "$vif" re_scalingfactor
 		[ -n "$re_scalingfactor" ] && iwpriv "$ifname" set_whc_sfactor "$re_scalingfactor"
 
+		config_get root_distance "$vif" root_distance
+		[ -n "$root_distance" ] && iwpriv "$ifname" set_whc_dist "$root_distance"
+
+                config_get caprssi "$vif" caprssi
+                [ -n "$caprssi" ] && iwpriv "$ifname" caprssi "${caprssi}"
+
 		config_get_bool ap_isolation_enabled $device ap_isolation_enabled 0
 		config_get_bool isolate "$vif" isolate 0
 
@@ -1525,6 +1676,25 @@ enable_qcawifi() {
 
 		config_get cactimeout  "$vif" cactimeout
 		[ -n "$cactimeout" ] && iwpriv "$ifname" set_cactimeout "$cactimeout"
+
+                config_get global_wds qcawifi global_wds
+
+                if [ $global_wds -ne 0 ]; then
+                     iwpriv "$ifname" athnewind 1
+                fi
+
+                config_get pref_uplink "$device" pref_uplink
+                [ -n "$pref_uplink" ] && iwpriv "$phy" pref_uplink "${pref_uplink}"
+
+                config_get fast_lane "$device" fast_lane
+                [ -n "$fast_lane" ] && iwpriv "$phy" fast_lane "${fast_lane}"
+
+                if [ $fast_lane -ne 0 ]; then
+                        iwpriv "$ifname" athnewind 1
+                fi
+
+		config_get enable_fils  "$vif" ieee80211ai
+		[ -n "$enable_fils" ] && iwpriv "$ifname" enable_fils "$enable_fils"
 
 		local net_cfg bridge
 		net_cfg="$(find_net_config "$vif")"
@@ -1605,6 +1775,12 @@ enable_qcawifi() {
 		config_get vhtmcs "$vif" vhtmcs
 		[ -n "$vhtmcs" ] && iwpriv "$ifname" vhtmcs "$vhtmcs"
 
+		config_get dis_legacy "$vif" dis_legacy
+		[ -n "$dis_legacy" ] && iwpriv "$ifname" dis_legacy "$dis_legacy"
+
+		config_get set_bcn_rate "$vif" set_bcn_rate
+		[ -n "$set_bcn_rate" ] && iwpriv "$ifname" set_bcn_rate "$set_bcn_rate"
+
 		#support nawds
 		config_get nawds_mode "$vif" nawds_mode
 		[ -n "$nawds_mode" ] && wlanconfig "$ifname" nawds mode "${nawds_mode}"
@@ -1648,6 +1824,30 @@ enable_qcawifi() {
 			enable_rps $ifname
 		fi
 
+		config_get macaddr "$device" macaddr
+		[ -n "$macaddr" ] && iwpriv "$phy" setHwaddr "$macaddr"
+
+		
+		config_get lowrate  "$device" lowrate
+		[ -n "$lowrate" ]  &&   iwpriv "$phy" set_lower_rate $lowrate
+
+		config_get rssi_thres "$device" rssi_thres
+		[ -n "$rssi_thres" ]  &&  iwpriv "$phy" set_min_snr_en 1 && iwpriv "$phy" set_min_snr $rssi_thres
+	
+		config_get  commitatf "$vif" commitatf
+		[ -n "$commitatf" ] && iwpriv "$ifname" commitatf $commitatf
+
+		config_get auth_count "$device" auth_count
+		[ -n "$auth_count" ] && iwpriv "$phy" set_auth_count  $auth_count	
+			
+	#	iwpriv "vif" commitatf 1	
+	
+	#	iwpriv "$vif" wlan_id $wlan_id_num	
+	
+	#	wlan_id_num=$(($wlan_id_num+1))
+		
+		
+
 	done
 
         config_get primaryradio "$device" primaryradio
@@ -1666,6 +1866,17 @@ enable_qcawifi() {
 		. /lib/update_smp_affinity.sh
 		config_foreach enable_smp_affinity_wifi wifi-device
 	fi
+
+
+#	iwpriv ath0 set_bcn_rate 6000
+#	iwpriv ath01 set_bcn_rate 6000
+#        iwpriv wifi0 set_min_snr_en 1 
+#	iwpriv wifi0 set_min_snr 13
+
+
+
+
+
 }
 
 setup_wps_enhc_device() {
@@ -1691,15 +1902,27 @@ setup_wps_enhc_device() {
 	for vif in $vifs; do
 		config_get ifname "$vif" ifname
 
-		append wps_enhc_cfg "VAP" "$N"
 		config_get_bool wps_pbc_enable "$vif" wps_pbc_enable 0
 		config_get wps_pbc_start_time "$vif" wps_pbc_start_time
 		config_get wps_pbc_duration "$vif" wps_pbc_duration
-		if [ $wps_pbc_enable -ne 0 ]; then
-			[ -n "$wps_pbc_start_time" -a -n "$wps_pbc_duration" ] && \
-					append wps_enhc_cfg "$ifname:$wps_pbc_start_time:$wps_pbc_duration:$device" "$N"
-			[ -n "$wps_pbc_start_time" -a -n "$wps_pbc_duration" ] || \
-					append wps_enhc_cfg "$ifname:-:-:$device" "$N"
+		config_get_bool wps_pbc_noclone "$vif" wps_pbc_noclone 0
+		config_get_bool disabled "$vif" disabled 0
+		if [ $disabled -eq 0 -a $wps_pbc_enable -ne 0 ]; then
+			append wps_enhc_cfg "VAP" "$N"
+			[ -n "$wps_pbc_start_time" -a -n "$wps_pbc_duration" ] && {
+				if [ $wps_pbc_noclone -eq 0 ]; then
+					append wps_enhc_cfg "$ifname:$wps_pbc_start_time:$wps_pbc_duration:$device:clone" "$N"
+				else
+					append wps_enhc_cfg "$ifname:$wps_pbc_start_time:$wps_pbc_duration:$device:noclone" "$N"
+				fi
+			}
+			[ -n "$wps_pbc_start_time" -a -n "$wps_pbc_duration" ] || {
+				if [ $wps_pbc_noclone -eq 0 ]; then
+					append wps_enhc_cfg "$ifname:-:-:$device:clone" "$N"
+				else
+					append wps_enhc_cfg "$ifname:-:-:$device:noclone" "$N"
+				fi
+			}
 		fi
 	done
 
@@ -1715,6 +1938,9 @@ setup_wps_enhc() {
 	config_get_bool wps_pbc_overwrite_ap_settings_all qcawifi wps_pbc_overwrite_ap_settings_all 0
 	[ $wps_pbc_overwrite_ap_settings_all -ne 0 ] && \
 			append wps_enhc_cfg "-:overwrite_ap_settings_all" "$N"
+	config_get_bool wps_pbc_overwrite_sta_settings_all qcawifi wps_pbc_overwrite_sta_settings_all 0
+	[ $wps_pbc_overwrite_sta_settings_all -ne 0 ] && \
+			append wps_enhc_cfg "-:overwrite_sta_settings_all" "$N"
 	config_get wps_pbc_overwrite_ssid_suffix qcawifi wps_pbc_overwrite_ssid_suffix
 	[ -n "$wps_pbc_overwrite_ssid_suffix" ] && \
 			append wps_enhc_cfg "-:overwrite_ssid_suffix:$wps_pbc_overwrite_ssid_suffix" "$N"
@@ -1781,8 +2007,17 @@ pre_qcawifi() {
 			[ ! -f /etc/init.d/mcsd ] || /etc/init.d/mcsd stop
 			[ ! -f /etc/init.d/wsplcd ] || /etc/init.d/wsplcd stop
 
-			rm -f /var/run/wifi-wps-enhc-extn.conf
-			[ -r /var/run/wifi-wps-enhc-extn.pid ] && kill "$(cat "/var/run/wifi-wps-enhc-extn.pid")"
+                       rm -f /var/run/wifi-wps-enhc-extn.conf
+                       [ -r /var/run/wifi-wps-enhc-extn.pid ] && kill "$(cat "/var/run/wifi-wps-enhc-extn.pid")"
+
+			rm -f /var/run/iface_mgr.conf
+			[ -r /var/run/iface_mgr.pid ] && kill "$(cat "/var/run/iface_mgr.pid")"
+                        rm -f /var/run/iface_mgr.pid
+			killall iface-mgr
+
+                        if [ -f  "/var/run/son.conf" ]; then
+                                rm /var/run/son.conf
+                        fi
 		;;
 	esac
 }
@@ -1832,10 +2067,18 @@ post_qcawifi() {
 			[ ! -f /etc/init.d/wsplcd ] || /etc/init.d/wsplcd start
 
 			config_get_bool wps_pbc_extender_enhance qcawifi wps_pbc_extender_enhance 0
-			[ ${wps_pbc_extender_enhance} -ne 0 ] && { \
+			[ ${wps_pbc_extender_enhance} -ne 0 ] && {
 				rm -f /var/run/wifi-wps-enhc-extn.conf
 				setup_wps_enhc
 			}
+
+			config_load wireless
+			config_foreach son_get_config wifi-device
+
+                        rm -f /etc/ath/iface_mgr.conf
+                        rm -f /var/run/iface_mgr.pid
+                        iface_mgr_setup
+
 		;;
 	esac
 }
@@ -1858,8 +2101,14 @@ detect_qcawifi() {
 	nss_olcfg=0
 	nss_ol_num=0
 	reload=0
-	name=2.4G
 	xindao=auto
+	gonglv=30
+ #	guojia=CN
+	lowerrate=12
+	ssid=Tozed-2.4G
+	auth_count=3
+	rssi_thres=""
+	commitatf=0	
 	sleep 3
 	load_qcawifi
 	config_load wireless
@@ -1874,19 +2123,14 @@ detect_qcawifi() {
 		found=0
 		config_foreach check_qcawifi_device wifi-device
 		[ "$found" -gt 0 ] && continue
-	   mode_ht=HT20
-                    
+
 		hwcaps=$(cat ${dev}/hwcaps)
 		case "${hwcaps}" in
 			*11bgn) mode_11=ng;;
 			*11abgn) mode_11=ng;;
 			*11an) mode_11=na;;
-			*11an/ac) mode_11=ac
-			   mode_ht=HT80
-                    ;;
-			*11abgn/ac) mode_11=ac
-			   mode_ht=HT80
-                    ;;
+			*11an/ac) mode_11=ac;;
+			*11abgn/ac) mode_11=ac;;
 		esac
 		if [ -f /sys/class/net/${dev}/nssoffload ] && [ $(cat /sys/class/net/${dev}/nssoffload) == "capable" ]; then
 			case "${mode_11}" in
@@ -1905,32 +2149,53 @@ detect_qcawifi() {
 					fi
 				;;
 			esac
+		reload=1
 		fi
 		echo $nss_olcfg >/lib/wifi/wifi_nss_olcfg
 		echo $nss_ol_num >/lib/wifi/wifi_nss_olnum
-		reload=1
 	
-		[ $devidx -eq 1 ]&& name=5.8G
-		[ $devidx -eq 1 ]&& xindao=149
-		
+#		[ $devidx -eq 1 ]&& xindao=149
+		#[ $devidx -eq 1 ]&& guojia=CN
+		[ $devidx -eq 1 ]&& gonglv=23
+		[ $devidx -eq 1 ]&& ssid=Tozed-5.8G
+		[ $devidx -eq 1 ]&& lowerrate=""		
+		[ $devidx -eq 1 ]&& auth_count=""
+		[ $devidx -eq 1 ]&& rssi_thres=""
+
+
 		cat <<EOF
 config wifi-device  wifi$devidx
 	option type	qcawifi
-	option channel	${xindao}
+#	option channel	$xindao
+	option channel auto
 	option macaddr	$(cat /sys/class/net/${dev}/address)
 	option hwmode	11${mode_11}
-	option htmode 	$mode_ht
 	# REMOVE THIS LINE TO ENABLE WIFI:
 	#option disabled 1
-	option country  US
-	option txpower 30
+	option country CN
+	option htmode HT20	
+	option txpower $gonglv
+	option AMPDU '1'
+	option lowrate $lowerrate
+	option auth_count $auth_count
+#	option rssi_thres $rssi_thres
 
 config wifi-iface
 	option device	wifi$devidx
 	option network	lan
 	option mode	ap
-	option ssid	${name}_$(cat /sys/class/net/${dev}/address|awk -F ":" '{print $4""$5""$6 }'| tr a-z A-Z)
+	option ssid	$ssid
 	option encryption none
+	option maxsta 32
+	option wmm '1'
+	option bintval '100'
+        option shortgi '1'
+        option frag '2346'
+        option rts '2346'
+        option isolate '0'
+#	option protmode '2'
+#	option commitatf $commitatf
+
 
 EOF
 	devidx=$(($devidx + 1))
@@ -1946,4 +2211,27 @@ EOF
 trap_qcawifi() {
 	# Release any locks taken
 	lock -u /var/run/wifilock
+}
+
+son_get_config()
+{
+	config_load wireless
+	local device="$1"
+	config_get disabled $device disabled 0
+	if [ $disabled -eq 0 ]; then
+	config_get vifs $device vifs
+	for vif in $vifs; do
+		config_get_bool disabled "$vif" disabled 0
+		[ $disabled = 0 ] || continue
+		config_get backhaul "$vif" backhaul 0
+		config_get mode $vif mode
+		config_get ifname $vif ifname
+		local macaddr="$(config_get "$device" macaddr)"
+		if [ $backhaul -eq 1 ]; then
+			echo " $mode $ifname $device $macaddr"  >> /var/run/son.conf
+		else
+			echo " nbh_$mode $ifname $device $macaddr"  >> /var/run/son.conf
+		fi
+	done
+	fi
 }

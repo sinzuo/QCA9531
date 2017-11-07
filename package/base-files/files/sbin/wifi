@@ -255,3 +255,4 @@ radartool -i wifi1 disable
 ifconfig ath0 down 
 ifconfig ath0 up
 
+iwpriv wifi0  dcs_enable 0

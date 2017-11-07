@@ -9,7 +9,7 @@ cp /home/ayuchou/work/9531/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/li
 /home/ayuchou/work/9531/openwrt/staging_dir/host/bin/mkimage -A mips -O linux -T kernel -a 0x80060000 -C lzma  -e 0x80060000 -n 'MIPS OpenWrt Linux-3.18.23' -d /home/ayuchou/work/9531/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/vmlinux-ap147-010.bin.lzma /home/ayuchou/work/9531/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/vmlinux-ap147-010.uImage
 
 
-#cp /home/ayuchou/work/9531/openwrt/sh/config/qcawifi.sh.30  /home/ayuchou/work/9531/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/root-ar71xx/lib/wifi/qcawifi.sh
+cp /home/ayuchou/work/9531/openwrt/sh/config/qcawifi.sh.30  /home/ayuchou/work/9531/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/root-ar71xx/lib/wifi/qcawifi.sh
 
 #cp  /home/ayuchou/work/9531/openwrt/sh/config/5g-xiding  /home/ayuchou/work/9531/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/root-ar71xx/etc/config/wireless
 
@@ -46,3 +46,6 @@ t=`date +%Y-%m-%d-%H-%M-%S`
 
 /home/ayuchou/work/9531/openwrt/staging_dir/host/bin/padjffs2 /home/ayuchou/work/9531/openwrt/bin/ar71xx/ap147-5G-shiwai-$1.bin 4 8 16 64 128 256
 
+
+
+cp /home/ayuchou/work/9531/openwrt/bin/ar71xx/ap147-5G-shiwai-$1.bin /home/ayuchou/work/9531/openwrt/bin/ar71xx/$1.bin
