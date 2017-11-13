@@ -1,0 +1,41 @@
+<%#
+ Copyright 2008 Steven Barth <steven@midlink.org>
+ Copyright 2008-2009 Jo-Philipp Wich <jow@openwrt.org>
+ Licensed to the public under the Apache License 2.0.
+-%>
+
+<%+header%>
+
+<h2><a id="content" name="content"><%:Flash Firmware%> - <%:Verify%></a></h2>
+<p>
+    <div class="cbi-section-error">
+        <br/><%:Error,md5code check failed!%><br/>
+   </div>
+
+</p>
+
+<fieldset class="cbi-section">
+	<ul>
+		<li><%:MD5%>:&nbsp;&nbsp;&nbsp; <code><%=md5%></code></li>
+		<li><%:Checksum%>: <code><%=checksum%></code></li>
+		<li><%:Size%>: <%
+			local w = require "luci.tools.webadmin"
+			write(w.byte_format(size))
+
+			if storage > 0 then
+				write(luci.i18n.translatef(
+					" (%s available)",
+					w.byte_format(storage)
+				))
+			end
+		%></li>
+	</ul>
+</fieldset>
+
+<div class="cbi-page-actions right">
+	<form style="display:inline" action="<%=REQUEST_URI%>" method="post">
+		<input class="cbi-button cbi-button-reset" type="submit" value="<%:Cancel%>" />
+	</form>
+</div>
+
+<%+footer%>
