@@ -1,0 +1,11 @@
+--- a/iwinfo.c
++++ b/iwinfo.c
+@@ -279,7 +279,7 @@ rpc_iwinfo_info(struct ubus_context *ctx
+ 
+ 	blob_buf_init(&buf, 0);
+ 
+-	rpc_iwinfo_call_str("phy", iw->phyname);
++//	rpc_iwinfo_call_str("phy", iw->phyname);
+ 
+ 	rpc_iwinfo_call_str("ssid", iw->ssid);
+ 	rpc_iwinfo_call_str("bssid", iw->bssid);
