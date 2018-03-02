@@ -26,7 +26,7 @@ config led 'led_lan1'
 	option name 'LAN1'
 	option sysfs 'ap147:green:lan1'
 	option port_mask '0x10'
-	option default '1'
+	option default '0'
 	option trigger 'none'
 
 config led 'led_lan2'
