@@ -159,6 +159,7 @@ struct ieee80211req_sta_info {
 #endif
 
 #if 0
+//中石油
 struct ieee80211req_sta_info {
         u_int16_t       isi_len;                /* length (mult of 4) */
         u_int16_t       isi_freq;               /* MHz */
@@ -209,7 +210,8 @@ struct ieee80211req_sta_info {
 
 #endif
 
-
+//#if  0
+////  shuan  pin  正常代码  不编译中石油  取消这里
 struct ieee80211req_sta_info {
         u_int16_t       isi_len;                /* length (mult of 4) */
         u_int16_t       isi_freq;               /* MHz */
@@ -268,6 +270,6 @@ struct ieee80211req_sta_info {
         u_int8_t isi_rx_nss;         /* number of rx chains */
         u_int8_t isi_tx_nss;         /* number of tx chains */
 };
-
+//#endif
 
 #endif
