@@ -1,0 +1,16 @@
+#!/bin/sh /etc/rc.common
+
+START=57
+
+start(){
+	service_start /usr/sbin/apmodedhcplist
+}
+
+stop(){
+	service_stop /usr/sbin/apmodedhcplist
+}
+
+restart(){
+        stop
+        start
+}

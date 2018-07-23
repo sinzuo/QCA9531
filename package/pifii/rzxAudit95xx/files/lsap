@@ -1,0 +1,210 @@
+#!/bin/sh
+
+usage()
+{
+cat <<EOF
+USAGE: /usr/bin/lsap [parameter] 
+   --mac: device mac
+   --devices: network interface 
+   --wan_ip:  wan ip
+   --ssid: wireless name 
+   --isauth: auth flag,enable:1,disable:0
+   --run_mode: route:1 ,ap:2
+   --cpu:  
+   --mem:  
+   --user_num: user number 
+   --fversion: firmware version 
+   --product:  product class 
+   --longitude: 
+   --latitude:
+   --sn: serial number 
+   --loid:  
+EOF
+exit 1
+}
+
+get_mac()
+{
+    #ifconfig br-lan | grep HWaddr | awk '{print $5}' | tr -s ":" "-"
+    local mtd=$(cat /proc/mtd | grep art | awk -F: '{print $1}')
+    dd bs=1 skip=0 count=6 if=/dev/"$mtd" 2>/dev/null | hexdump -vC | head -n 1 | awk '{print $2"-"$3"-"$4"-"$5"-"$6"-"$7}' | tr 'a-z' 'A-Z'
+}
+get_devices()
+{
+    echo "br-lan"
+}
+get_wan_ip()
+{
+   #ifconfig $(uci -q get network.wan.ifname) 2>/dev/null | grep "inet addr" | awk '{print $2}' | tr -d "addr:" 
+   lua -e '
+    require "luci.model.uci"
+    local uci = luci.model.uci.cursor()
+    local util = require ("luci.util")
+    local proto = uci:get("network","lan","proto") or ""
+    local ifa = util.ubus("network.interface.lan","status")
+    local res = ""
+    if "dhcp" == ifa.proto then
+        if ifa["ipv4-address"] and ifa["ipv4-address"][1] then
+            res = ifa["ipv4-address"][1]["address"] or ""
+        end
+    else
+        ifa = util.ubus("network.interface.wan","status")
+        if ifa["ipv4-address"] and ifa["ipv4-address"][1] then
+            res = ifa["ipv4-address"][1]["address"] or ""
+        end
+    end
+    print(res)'
+}
+
+get_ssid()
+{
+    iwconfig 2>/dev/null | grep ESSID | head -n 1 | awk -F: '{print $2}' | tr -d '"'    
+}
+get_isauth()
+{
+    local ena=$(uci -q get wifidog.wifidog.wifidog_enable)
+    if [ "" == "$ena" ];then
+        echo 0
+    else
+        echo "$ena"
+    fi
+}
+get_run_mode()
+{
+    local p=`uci -q get network.lan.proto`    
+    if [ "dhcp" == "$p" ]; then
+        echo 2
+    else
+        echo 1
+    fi
+}
+get_cpu()
+{
+   echo $(top -n -1 | grep CPU: | grep usr | awk '{print $2+$4}')"%" 
+}
+get_mem()
+{
+   echo $(free | grep Mem | awk '{print int(($3-$6)/$2*100)}')"%"   
+}
+get_user_num()
+{
+    local n=0
+    local t=0
+    for var in `ls /sys/devices/virtual/net/ | grep ^ath`;do
+         n=`iwinfo "$var" a | grep -E ".{2}:.{2}:.{2}:.{2}:.{2}:.{2}" | grep 00:00:00:00:00:00 -v | wc -l` 
+         t=$((n+t)) 
+    done
+    echo $t
+}
+get_firmware_version()
+{
+    #cat /etc/openwrt_version
+    if [ -f /etc/sysinfo.conf ];then
+        grep soft_version= /etc/sysinfo.conf | sed 's/soft_version=//g'
+    else
+        #echo "v1.7.0"
+        cat /etc/openwrt_version
+    fi
+}
+get_product()
+{
+    #test -f /etc/version && cat /etc/version
+    #test -f /tmp/sysinfo/model && cat /tmp/sysinfo/model 
+    echo "ZLT-P11(IDU)"
+}
+get_longitude()
+{
+    echo ""
+}
+get_latitude()
+{
+    echo ""
+}
+get_sn()
+{
+    #echo "TZ000"$(uci -q get freecwmp.@device[0].serial_number)     
+    local mtd=$(cat /proc/mtd | grep art | awk -F: '{print $1}')
+    dd bs=1 skip=0 count=6 if=/dev/"$mtd" 2>/dev/null | hexdump -vC | head -n 1 | awk '{print $2$3$4$5$6$7}' | tr -s {a-z} {A-Z}
+}
+
+get_loid()
+{
+    echo ""
+}
+
+get_all()
+{
+    echo "MAC="$(get_mac)
+    echo "DEVICES="$(get_devices)
+    echo "WAN_IP="$(get_wan_ip)
+    echo "SSID="$(get_ssid)
+    echo "ISAUTH="$(get_isauth)
+    echo "RUNMODE="$(get_run_mode)
+    echo "USERNUM="$(get_user_num)
+    echo "CPU_USAGE="$(get_cpu)
+    echo "MEMORY_USAGE="$(get_mem)
+    echo "FIRMWARE_VERSION="$(get_firmware_version)
+    echo "PRODUCT="$(get_product)
+    echo "LONGITUDE="$(get_longitude)
+    echo "LATITUDE="$(get_latitude)
+    echo "SN="$(get_sn)
+    echo "LOID="$(get_loid)
+}
+#main
+case "$1" in 
+    --mac)  
+         get_mac 
+         ;;  
+    --devices)  
+         get_devices 
+         ;;  
+    --wan_ip)  
+         get_wan_ip 
+         ;;  
+    --ssid)  
+         get_ssid 
+         ;;  
+    --isauth)  
+         get_isauth
+         ;;  
+    --run_mode)  
+         get_run_mode
+         ;;  
+    --cpu)  
+         get_cpu
+         ;;  
+    --mem)  
+         get_mem 
+         ;;  
+    --user_num)  
+         get_user_num 
+         ;;  
+    --fversion)  
+         get_firmware_version 
+         ;;  
+    --product)  
+         get_product 
+         ;;  
+    --longitude)  
+         get_longitude 
+         ;;  
+    --latitude)  
+         get_latitude
+         ;;  
+    --sn)  
+         get_sn 
+         ;;  
+    --loid)  
+         get_loid 
+            ;;  
+    -h|--help)  
+            usage  
+            ;;  
+    "")  
+            get_all 
+            ;;  
+    *)  
+            usage  
+            ;;  
+esac  
+

@@ -1,0 +1,24 @@
+#!/bin/sh /etc/rc.common
+
+START=95
+
+local pro="/usr/sbin/localreportserver"
+
+start(){
+	local pid=$(pgrep -f "$pro")
+	if [ "" = "$pid" ];then
+	    "$pro" &
+	fi
+}
+
+stop(){
+	local pid=$(pgrep -f "$pro")
+	if [ "" != "$pid" ];then
+	    kill -15 "$pid" 
+	fi
+}
+
+restart(){
+        stop
+        start
+}

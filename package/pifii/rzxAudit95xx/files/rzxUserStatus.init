@@ -1,0 +1,29 @@
+#!/bin/sh /etc/rc.common
+
+START=96
+
+local ctl="/usr/sbin/rzxUserController"
+local pro="/usr/sbin/rzxUserStatus"
+
+start(){
+        local pid=$(pgrep -f "$ctl")
+        if [ "" = "$pid" ];then
+            "$ctl" &
+        fi
+}
+
+stop(){
+        local pid=$(pgrep -f "$ctl")
+        if [ "" != "$pid" ];then
+            kill -15 "$pid"
+        fi
+        pid=$(pgrep -f "$pro")
+        if [ "" != "$pid" ];then
+            kill -15 "$pid"
+        fi
+}
+
+restart(){
+        stop
+        start
+}

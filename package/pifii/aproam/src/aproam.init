@@ -1,0 +1,42 @@
+#!/bin/sh /etc/rc.common
+
+START=96
+
+local res="/usr/sbin/aproamresponse"
+local req="/usr/sbin/aproamrequest"
+local tmp="/usr/sbin/aproam2gto5g"
+
+start(){
+        local pid=$(pgrep -f "$res")
+        if [ "" = "$pid" ];then
+            "$res" &
+        fi
+        pid=$(pgrep -f "$req")
+        if [ "" = "$pid" ];then
+            "$req" &
+        fi
+        pid=$(pgrep -f "$tmp")
+        if [ "" = "$pid" ];then
+            "$tmp" &
+        fi
+}
+
+stop(){
+	local pid=$(pgrep -f "$res")
+        if [ "" != "$pid" ];then
+            kill -15 "$pid"
+        fi		
+	local pid=$(pgrep -f "$req")
+        if [ "" != "$pid" ];then
+            kill -15 "$pid"
+        fi		
+	local pid=$(pgrep -f "$tmp")
+        if [ "" != "$pid" ];then
+            kill -15 "$pid"
+        fi		
+}
+
+restart(){
+        stop
+        start
+}

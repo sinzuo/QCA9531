@@ -1,0 +1,23 @@
+#!/bin/sh /etc/rc.common
+
+START=98
+
+local dir="/usr/sbin/Install_gram/"
+
+start(){
+     [ -d "$dir" ] || exit 0
+     cd "$dir"
+     ./control_audit.sh --start &
+}
+
+stop(){
+     [ -d "$dir" ] || exit 0
+     cd "$dir"
+     ./control_audit.sh --stop &
+}
+
+restart(){
+     [ -d "$dir" ] || exit 0
+     cd "$dir"
+     ./control_audit.sh --restart &
+}
