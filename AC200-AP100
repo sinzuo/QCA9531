@@ -1,10 +1,10 @@
 #!/bin/sh
 
 
-sed -i 's/AC200/AP100/g'  /home/ayuchou/work/9531/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/root-ar71xx/etc/version
-sed -i 's/AC200/AP100/g'  /home/ayuchou/work/9531/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/root-ar71xx/etc/openwrt_version
+sed -i 's/AC200/AP100/g'  ./build_dir/target-mips_34kc_uClibc-0.9.33.2/root-ar71xx/etc/version
+sed -i 's/AC200/AP100/g'  ./build_dir/target-mips_34kc_uClibc-0.9.33.2/root-ar71xx/etc/openwrt_version
 
-sed -i 's/AC200/AP100/g'  /home/ayuchou/work/9531/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/root-ar71xx/etc/openwrt_release
-sed -i 's/ac200/ap100/g'  /home/ayuchou/work/9531/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/root-ar71xx/etc/openwrt_release
+sed -i 's/AC200/AP100/g'  ./build_dir/target-mips_34kc_uClibc-0.9.33.2/root-ar71xx/etc/openwrt_release
+sed -i 's/ac200/ap100/g'  ./build_dir/target-mips_34kc_uClibc-0.9.33.2/root-ar71xx/etc/openwrt_release
 
 

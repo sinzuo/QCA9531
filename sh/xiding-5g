@@ -2,57 +2,57 @@
 
 
 
-name=`cat /home/ayuchou/work/9531/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/root-ar71xx/etc/openwrt_version`
+name=`cat ./build_dir/target-mips_34kc_uClibc-0.9.33.2/root-ar71xx/etc/openwrt_version`
 
 
 
-cp /home/ayuchou/work/9531/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/vmlinux /home/ayuchou/work/9531/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/vmlinux-ap147-010
-/home/ayuchou/work/9531/openwrt/staging_dir/host/bin/patch-cmdline /home/ayuchou/work/9531/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/vmlinux-ap147-010 "board=AP147-010 console=ttyS0,115200 mtdparts=spi0.0:256k(u-boot),64k(u-boot-env)ro,14528k(rootfs),1472k(kernel),64k(art),16000k@0x50000(firmware)"
-/home/ayuchou/work/9531/openwrt/staging_dir/host/bin/lzma e /home/ayuchou/work/9531/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/vmlinux-ap147-010 -lc1 -lp2 -pb2  /home/ayuchou/work/9531/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/vmlinux-ap147-010.bin.lzma
+cp ./build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/vmlinux ./build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/vmlinux-ap147-010
+./staging_dir/host/bin/patch-cmdline ./build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/vmlinux-ap147-010 "board=AP147-010 console=ttyS0,115200 mtdparts=spi0.0:256k(u-boot),64k(u-boot-env)ro,14528k(rootfs),1472k(kernel),64k(art),16000k@0x50000(firmware)"
+./staging_dir/host/bin/lzma e ./build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/vmlinux-ap147-010 -lc1 -lp2 -pb2  ./build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/vmlinux-ap147-010.bin.lzma
 
 
-/home/ayuchou/work/9531/openwrt/staging_dir/host/bin/mkimage -A mips -O linux -T kernel -a 0x80060000 -C lzma  -e 0x80060000 -n 'MIPS OpenWrt Linux-3.18.23' -d /home/ayuchou/work/9531/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/vmlinux-ap147-010.bin.lzma /home/ayuchou/work/9531/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/vmlinux-ap147-010.uImage
+./staging_dir/host/bin/mkimage -A mips -O linux -T kernel -a 0x80060000 -C lzma  -e 0x80060000 -n 'MIPS OpenWrt Linux-3.18.23' -d ./build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/vmlinux-ap147-010.bin.lzma ./build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/vmlinux-ap147-010.uImage
 
 
-#cp /home/ayuchou/work/9531/openwrt/sh/config/qcawifi.sh.23  /home/ayuchou/work/9531/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/root-ar71xx/lib/wifi/qcawifi.sh
+#cp ./sh/config/qcawifi.sh.23  ./build_dir/target-mips_34kc_uClibc-0.9.33.2/root-ar71xx/lib/wifi/qcawifi.sh
 
-#cp  /home/ayuchou/work/9531/openwrt/sh/config/5g-xiding  /home/ayuchou/work/9531/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/root-ar71xx/etc/config/wireless
-
-
-
-cp /home/ayuchou/work/9531/openwrt/sh/config/network  /home/ayuchou/work/9531/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/root-ar71xx/etc/config/
+#cp  ./sh/config/5g-xiding  ./build_dir/target-mips_34kc_uClibc-0.9.33.2/root-ar71xx/etc/config/wireless
 
 
 
-/home/ayuchou/work/9531/openwrt/staging_dir/host/bin/mksquashfs4 /home/ayuchou/work/9531/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/root-ar71xx /home/ayuchou/work/9531/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs -nopad -noappend -root-owned -comp xz -Xpreset 9 -Xe -Xlc 0 -Xlp 2 -Xpb 2  -b 256k -p '/dev d 755 0 0' -p '/dev/console c 600 0 0 5 1' -processors 1
+cp ./sh/config/network  ./build_dir/target-mips_34kc_uClibc-0.9.33.2/root-ar71xx/etc/config/
 
 
 
-cp /home/ayuchou/work/9531/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs /home/ayuchou/work/9531/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs-raw
-cp /home/ayuchou/work/9531/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs /home/ayuchou/work/9531/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs-64k
-/home/ayuchou/work/9531/openwrt/staging_dir/host/bin/padjffs2 /home/ayuchou/work/9531/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs-64k 64
-cp /home/ayuchou/work/9531/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs-64k /home/ayuchou/work/9531/openwrt/bin/ar71xx/openwrt-ar71xx-generic-root.squashfs-64k
-/home/ayuchou/work/9531/openwrt/staging_dir/host/bin/padjffs2 /home/ayuchou/work/9531/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs 4 8 16 64 128 25
+./staging_dir/host/bin/mksquashfs4 ./build_dir/target-mips_34kc_uClibc-0.9.33.2/root-ar71xx ./build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs -nopad -noappend -root-owned -comp xz -Xpreset 9 -Xe -Xlc 0 -Xlp 2 -Xpb 2  -b 256k -p '/dev d 755 0 0' -p '/dev/console c 600 0 0 5 1' -processors 1
 
 
 
-dd if=/home/ayuchou/work/9531/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs of=/home/ayuchou/work/9531/openwrt/bin/ar71xx/openwrt-ar71xx-generic-root.squashfs bs=128k conv=sync
+cp ./build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs ./build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs-raw
+cp ./build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs ./build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs-64k
+./staging_dir/host/bin/padjffs2 ./build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs-64k 64
+cp ./build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs-64k ./bin/ar71xx/openwrt-ar71xx-generic-root.squashfs-64k
+./staging_dir/host/bin/padjffs2 ./build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs 4 8 16 64 128 25
+
+
+
+dd if=./build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs of=./bin/ar71xx/openwrt-ar71xx-generic-root.squashfs bs=128k conv=sync
 
 t=`date +%Y-%m-%d-%H-%M-%S`
 #t=`date +%Y-%m-%d`
 
- ( dd if=/home/ayuchou/work/9531/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs-64k bs=14876672 conv=sync; dd if=/home/ayuchou/work/9531/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/vmlinux-ap147-010.uImage ) > /home/ayuchou/work/9531/openwrt/bin/ar71xx/ap147-5G-xiding-$name.bin;
+ ( dd if=./build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs-64k bs=14876672 conv=sync; dd if=./build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/vmlinux-ap147-010.uImage ) > ./bin/ar71xx/ap147-5G-xiding-$name.bin;
 
 
-#( dd if=/home/ayuchou/work/9531/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs-64k  conv=sync; dd if=/home/ayuchou/work/9531/openwrt/build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/vmlinux-ap147-010.uImage ) > /home/ayuchou/work/9531/openwrt/bin/ar71xx/ap147-5G-xiding.bin;
+#( dd if=./build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/root.squashfs-64k  conv=sync; dd if=./build_dir/target-mips_34kc_uClibc-0.9.33.2/linux-ar71xx_generic/tmp/vmlinux-ap147-010.uImage ) > ./bin/ar71xx/ap147-5G-xiding.bin;
 
 
 
-/home/ayuchou/work/9531/openwrt/staging_dir/host/bin/padjffs2 /home/ayuchou/work/9531/openwrt/bin/ar71xx/ap147-5G-xiding-$name.bin 4 8 16 64 128 256
+./staging_dir/host/bin/padjffs2 ./bin/ar71xx/ap147-5G-xiding-$name.bin 4 8 16 64 128 256
 
 
-mv /home/ayuchou/work/9531/openwrt/bin/ar71xx/ap147-5G-xiding-$name.bin /home/ayuchou/work/9531/openwrt/bin/ar71xx/$name.bin
+mv ./bin/ar71xx/ap147-5G-xiding-$name.bin ./bin/ar71xx/$name.bin
 
-md5sum   /home/ayuchou/work/9531/openwrt/bin/ar71xx/$name.bin
+md5sum   ./bin/ar71xx/$name.bin
 
 
