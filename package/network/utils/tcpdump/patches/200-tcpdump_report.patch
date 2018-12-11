@@ -1,0 +1,155 @@
+--- a/tcpdump.c	2018-12-07 10:27:22.730606987 +0800
++++ b/tcpdump.c	2018-12-07 14:31:06.261610276 +0800
+@@ -386,10 +386,17 @@
+ 
+ static int supports_monitor_mode;
+ 
+-extern int optind;
+-extern int opterr;
++extern int  optind;
++extern int  opterr;
+ extern char *optarg;
+ 
++struct send_strcut{
++	char   mac[6];
++	char   sendMsg[1024];
++};
++
++
++
+ struct print_info {
+         netdissect_options *ndo;
+         union {
+@@ -698,6 +705,11 @@
+ 	return ret;
+ }
+ 
++#define INPORT    "9998"
++#define INADDR    "127.0.0.1"
++int    sock;
++struct sockaddr_in addr;
++
+ int
+ main(int argc, char **argv)
+ {
+@@ -732,8 +744,23 @@
+ 	if(wsockinit() != 0) return 1;
+ #endif /* WIN32 */
+ 
++	char *ipaddrDes = INADDR;
++	char *portDes   = INPORT;
++
++	
++
++
++
++
++    char buff[512];
++    int len = sizeof(addr);
++    sprintf(buff,"jiang send tcpdump pkg");
++
++
++	
++
+ 	jflag=-1;	/* not set */
+-        gndo->ndo_Oflag=1;
++    gndo->ndo_Oflag=1;
+ 	gndo->ndo_Rflag=1;
+ 	gndo->ndo_dlt=-1;
+ 	gndo->ndo_default_print=ndo_default_print;
+@@ -1079,7 +1106,8 @@
+ 			break;
+ 
+ 		case 'V':
+-			VFileName = optarg;
++			// VFileName = optarg;
++			ipaddrDes = optarg;
+ 			break;
+ 
+ 		case 'w':
+@@ -1135,6 +1163,24 @@
+ 			/* NOTREACHED */
+ 		}
+ 
++    if ( (sock=socket(AF_INET, SOCK_DGRAM, 0)) <0)
++    {
++        perror("socket");
++        exit(1);
++    }
++    addr.sin_family = AF_INET;
++    addr.sin_port = htons(atoi(portDes));
++	printf("jiangyibomm %s\n",ipaddrDes);
++    addr.sin_addr.s_addr = inet_addr(ipaddrDes);
++    if (addr.sin_addr.s_addr == INADDR_NONE)
++    {
++        printf("Incorrect ip address!");
++        close(sock);
++        exit(1);
++    }
++
++
++
+ 	switch (tflag) {
+ 
+ 	case 0: /* Default */
+@@ -1556,6 +1602,7 @@
+ 			(void)fprintf(stderr, "%s: ", program_name);
+ 		dlt = pcap_datalink(pd);
+ 		dlt_name = pcap_datalink_val_to_name(dlt);
++		printf("jiangyibo -4\n");
+ 		if (dlt_name == NULL) {
+ 			(void)fprintf(stderr, "listening on %s, link-type %u, capture size %u bytes\n",
+ 			    device, dlt, snaplen);
+@@ -1941,6 +1988,20 @@
+ 
+ 	print_info = (struct print_info *)user;
+ 
++	
++    printf("jiangyibo 15 %02x %02x \r\n",*(sp+100),*(sp+101));
++
++	int n;
++    n = sendto(sock, sp, 200, 0, (struct sockaddr *)&addr, sizeof(addr));
++    if (n < 0)
++    {
++        perror("sendto");
++        close(sock);
++        
++    }
++	
++	
++
+ 	/*
+ 	 * Some printers want to check that they're not walking off the
+ 	 * end of the packet.
+@@ -1962,6 +2023,8 @@
+ 			/*
+ 			 * Include the link-layer header.
+ 			 */
++
++			printf("jiangyibo 13\r\n");
+ 			hex_and_ascii_print("\n\t", sp, h->caplen);
+ 		} else {
+ 			/*
+@@ -1969,6 +2032,7 @@
+ 			 * we have nothing past the link-layer header,
+ 			 * print nothing.
+ 			 */
++			 printf("jiangyibo 14\r\n");
+ 			if (h->caplen > hdrlen)
+ 				hex_and_ascii_print("\n\t", sp + hdrlen,
+ 				    h->caplen - hdrlen);
+@@ -2052,12 +2116,14 @@
+ static void
+ ndo_default_print(netdissect_options *ndo _U_, const u_char *bp, u_int length)
+ {
++    printf("jiangyibo  14\n");
+ 	hex_and_ascii_print("\n\t", bp, length); /* pass on lf and identation string */
+ }
+ 
+ void
+ default_print(const u_char *bp, u_int length)
+ {
++    printf("jiangyibo\n");
+ 	ndo_default_print(gndo, bp, length);
+ }
+ 
