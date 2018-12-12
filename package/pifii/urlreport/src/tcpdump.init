@@ -18,7 +18,7 @@ start_service () {
         then
         	DestIp=`uci get tcpdump.tcpdump.destIp`
         	procd_open_instance
-        	procd_set_param command "$PROG" -XvvennSs 0 -i br-lan tcp[20:2]=0x4745 or tcp[20:2]=0x4854 -V $DestIp 
+        	procd_set_param command "$PROG" -XvvennSs 0 -i eth1 tcp[20:2]=0x4745 or tcp[20:2]=0x4854 -V $DestIp 
         	procd_close_instance
         fi
 }
