@@ -1,0 +1,57 @@
+
+config local
+	option interface 'br-lan'
+	option port '7547'
+	option ubus_socket '/var/run/ubus.sock'
+	option date_format '%FT%T%z'
+	option freecwmp_enable '1'
+	option event 'boot'
+
+config acs
+	option scheme 'http'
+	option username 'freecwmp'
+	option password 'freecwmp'
+	option hostname 'pf.pifii.com'
+	option port '8081'
+	option path '/wifi/acs'
+
+config device
+	option manufacturer 'TZ'
+	option oui 'FFFFFF'
+	option product_class 'TZ9531'
+	option hardware_version 'v1.0.0'
+	option software_version 'v1.1.1'
+	option serial_number 'FFFFFF123456'
+
+config scripts
+	list location '/lib/functions/network.sh'
+	list location '/usr/share/freecwmp/functions/common'
+	list location '/usr/share/freecwmp/functions/device_info'
+	list location '/usr/share/freecwmp/functions/lan_device'
+	list location '/usr/share/freecwmp/functions/management_server'
+	list location '/usr/share/freecwmp/functions/wan_device'
+	list location '/usr/share/freecwmp/functions/misc'
+	list location '/usr/share/freecwmp/functions/device_users'
+	list location '/usr/share/freecwmp/functions/device_hosts'
+	list location '/usr/share/freecwmp/functions/device_routing'
+	list location '/usr/share/freecwmp/functions/device_ip'
+	list function 'device_info'
+	list function 'device_info_generic'
+	list function 'lan_device'
+	list function 'management_server'
+	list function 'management_server_generic'
+	list function 'wan_device'
+	list function 'misc'
+	list function 'device_users'
+	list function 'device_hosts'
+	list function 'device_routing'
+	list function 'device_ip'
+
+config cwmp
+	option parameter 'InternetGatewayDevice.ManagementServer.PeriodicInformEnable'
+	option value '1'
+
+config cwmp
+	option parameter 'InternetGatewayDevice.ManagementServer.PeriodicInformInterval'
+	option value '15'
+

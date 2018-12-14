@@ -1,0 +1,123 @@
+#!/bin/sh
+# Copyright (C) 2012 Luka Perkov <freecwmp@lukaperkov.net>
+
+get_wlan_enable() {
+local num="$1"
+local val=`/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wireless.@wifi-device[$num].disabled 2> /dev/null`
+let num=$num+1
+if [ "$val" = "1" ]; then
+	val="0"
+else
+	val="1"
+fi
+freecwmp_output "InternetGatewayDevice.LANDevice.1.WLANConfiguration.$num.Enable" "$val"
+}
+
+set_wlan_enable() {
+local num="$1"
+local val="$2"
+if [ "$val" = "1" ]; then
+	val="0"
+else
+	val="1"
+fi
+delay_command "wifi" "wifi" "45"
+/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-device[$num].disabled="$val"
+}
+
+get_wlan_ssid() {
+local num="$1"
+local val=`/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wireless.@wifi-iface[$num].ssid 2> /dev/null`
+let num=$num+1
+freecwmp_output "InternetGatewayDevice.LANDevice.1.WLANConfiguration.$num.SSID" "$val"
+}
+
+get_wifi_client() {
+local val=`/usr/bin/lua /usr/share/freecwmp/functions/wificlient.lua`
+freecwmp_output "InternetGatewayDevice.LANDevice.1.Wireless.WiFiClient" "$val"
+}
+
+set_wlan_ssid() {
+local num="$1"
+local val="$2"
+delay_command "wifi" "wifi" "45"
+/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[$num].ssid="$val"
+}
+
+set_wlan_key() {
+local num="$1"
+local val="$2"
+delay_command "wifi" "wifi" "45"
+if [ "$2" == "N/A" ]; then
+      /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[$num].encryption=none
+      /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} delete wireless.@wifi-iface[$num].key
+       else
+        /sbin/uci  -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[$num].encryption=psk+psk2
+        /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[$num].key="$val"
+fi    
+}
+
+get_lan_device() {
+case "$1" in
+	InternetGatewayDevice.)
+	get_wlan_enable 0
+	get_wlan_ssid 0
+	;;
+	InternetGatewayDevice.LANDevice.)
+	get_wlan_enable 0
+	get_wlan_ssid 0
+	;;
+	InternetGatewayDevice.LANDevice.1.)
+	get_wlan_enable 0
+	get_wlan_ssid 0
+	;;
+	InternetGatewayDevice.LANDevice.1.WLANConfiguration.)
+	get_wlan_enable 0
+	get_wlan_ssid 0
+	;;
+	InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.)
+	get_wlan_enable 0
+	get_wlan_ssid 0
+	;;
+	InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.Enable)
+	get_wlan_enable 0
+	;;
+	InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.SSID)
+	get_wlan_ssid 0
+	;;
+    InternetGatewayDevice.LANDevice.1.WLANConfiguration.2.Enable)
+	get_wlan_enable 1
+	;;
+	InternetGatewayDevice.LANDevice.1.WLANConfiguration.2.SSID)
+	get_wlan_ssid 1
+	;;
+        InternetGatewayDevice.LANDevice.1.Wireless.WiFiClient)                                           
+        get_wifi_client 1                                                                                       
+        ;; 
+
+esac
+}
+
+set_lan_device() {
+case "$1" in
+	InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.Enable)
+	set_wlan_enable 0 "$2"
+	;;
+	InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.SSID)
+	set_wlan_ssid 0 "$2"
+	;;
+	InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.PASS)
+	set_wlan_key 0 "$2"
+	;;
+	InternetGatewayDevice.LANDevice.1.WLANConfiguration.2.Enable)
+	set_wlan_enable 1 "$2"
+	;;
+	InternetGatewayDevice.LANDevice.1.WLANConfiguration.2.SSID)
+	set_wlan_ssid 1 "$2"
+	;;
+	InternetGatewayDevice.LANDevice.1.WLANConfiguration.2.PASS)
+	set_wlan_key 1 "$2"
+	;;
+esac
+/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit
+}

@@ -1,0 +1,21 @@
+# LIBFREECWMP_FOUND - true if library and headers were found
+# LIBFREECWMP_INCLUDE_DIRS - include directories
+# LIBFREECWMP_LIBRARIES - library directories
+
+find_package(PkgConfig)
+pkg_check_modules(PC_LIBFREECWMP QUIET freecwmp)
+
+find_path(LIBFREECWMP_INCLUDE_DIR libfreecwmp.h
+	HINTS ${PC_LIBFREECWMP_INCLUDEDIR} ${PC_LIBFREECWMP_INCLUDE_DIRS})
+
+find_library(LIBFREECWMP_LIBRARY NAMES freecwmp libfreecwmp
+	HINTS ${PC_LIBFREECWMP_LIBDIR} ${PC_LIBFREECWMP_LIBRARY_DIRS})
+
+set(LIBFREECWMP_LIBRARIES ${LIBFREECWMP_LIBRARY})
+set(LIBFREECWMP_INCLUDE_DIRS ${LIBFREECWMP_INCLUDE_DIR})
+
+include(FindPackageHandleStandardArgs)
+
+find_package_handle_standard_args(LIBFREECWMP DEFAULT_MSG LIBFREECWMP_LIBRARY LIBFREECWMP_INCLUDE_DIR)
+
+mark_as_advanced(LIBFREECWMP_INCLUDE_DIR LIBFREECWMP_LIBRARY)

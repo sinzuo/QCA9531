@@ -1,0 +1,63 @@
+/*
+ *	This program is free software: you can redistribute it and/or modify
+ *	it under the terms of the GNU General Public License as published by
+ *	the Free Software Foundation, either version 2 of the License, or
+ *	(at your option) any later version.
+ *
+ *	Copyright (C) 2011 Luka Perkov <freecwmp@lukaperkov.net>
+ */
+
+#ifndef _FREECWMP_CONFIG_H__
+#define _FREECWMP_CONFIG_H__
+
+#include <uci.h>
+
+#include "freecwmp.h"
+
+void config_exit(void);
+void config_load(void);
+int config_get_cwmp(char *parameter, char **value);
+int config_remove_event(char *event);
+
+struct acs {
+	char *scheme;
+	char *username;
+	char *password;
+	char *hostname;
+	char *port;
+	char *path;
+	char *ssl_cert;
+	char *ssl_cacert;
+	bool ssl_verify;
+	bool auth_digest;
+};
+
+struct device {
+	char *manufacturer;
+	char *oui;
+	char *product_class;
+	char *serial_number;
+	char *hardware_version;
+	char *software_version;
+};
+
+struct local {
+	char *ip;
+	char *interface;
+	char *port;
+	char *date_format;
+	char *username;
+	char *password;
+	char *ubus_socket;
+};
+
+struct core_config {
+	struct acs *acs;
+	struct device *device;
+	struct local *local;
+};
+
+extern struct core_config *config;
+
+#endif
+

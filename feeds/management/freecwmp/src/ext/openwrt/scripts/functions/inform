@@ -1,0 +1,521 @@
+#!/bin/sh
+# Copyright (C) 2011-2013 Luka Perkov <freecwmp@lukaperkov.net>
+##############################copy common code to here####################################3
+freecwmp_output() {
+local parameter="$1"
+local value="$2"
+local delimiter="$3"
+local ECHO_newline="-n"
+
+if [ "$delimiter" = "" ]; then
+	delimiter=":"
+fi
+
+if [ -n "$value" -o ${FLAGS_empty} -eq ${FLAGS_TRUE} ]; then
+	if [ ${FLAGS_value} -eq ${FLAGS_TRUE} ]; then
+		echo $ECHO_newline $value
+	else
+		echo $ECHO_newline $parameter "$delimiter" $value
+	fi
+fi
+}
+
+freecwmp_value_output() {
+	freecwmp_output "$1" "$2" "V"
+}
+
+freecwmp_notification_output() {
+	freecwmp_output "$1" "$2" "N"
+}
+
+freecwmp_object_output() {
+	freecwmp_output "$1" "$2" "O"
+}
+
+freecwmp_tags_output() {
+	freecwmp_output "$1" "$2" "T"
+}
+
+freecwmp_not_implemented() {
+	freecwmp_output "$1" "NOT_IMPLEMENTED"
+}
+
+freecwmp_check_prefix() {
+	local prefix="$1"
+	local parameter="$2"
+	case "$parameter" in
+		"$prefix"*)
+			eval "export -- \"$3=0\""
+		;;
+		*)
+			eval "export -- \"$3=-1\""
+		;;
+	esac
+}
+
+freecwmp_parse_formated_parameter() {
+	local _clean_parameter="$1"
+	local _formated_parameter="$2"
+	local _values
+
+	if [ "x$_clean_parameter" = "x" ]; then
+		eval "export -- \"$3=-1\""
+		return
+	fi
+
+	local _clean_parameter_array=`echo $_clean_parameter | sed 's/\./ /g'`
+	local _formated_parameter_array=`echo $_formated_parameter | sed 's/\./ /g'`
+
+	local i
+	local _clean_parameter_array_num=0
+	for i in $_clean_parameter_array
+	do
+		let _clean_parameter_array_num=$_clean_parameter_array_num+1
+	done
+
+	local _formated_parameter_array_num=0
+	for i in $_formated_parameter_array
+	do
+		let _formated_parameter_array_num=$_formated_parameter_array_num+1
+	done
+
+	if [ $_clean_parameter_array_num -ne $_formated_parameter_array_num ]; then
+		eval "export -- \"$3=-1\""
+		return
+	fi
+
+	local j=0
+	for i in $_formated_parameter_array
+	do
+		let j=$j+1
+		if [ "x$i" == "x{i}" ]; then
+			# get value for sections maked as {i}
+			local m
+			local n=0
+			for m in $_clean_parameter_array
+			do
+				let n=$n+1
+				if [ $n -eq $j ]; then
+					if [ "x$_values" == "x" ]; then
+						_values="$m"
+					else
+						_values="$_values $m"
+					fi
+				fi
+			done
+		else
+			# check if sections not marked as {i} match
+			local m
+			local n=0
+			for m in $_clean_parameter_array
+			do
+				let n=$n+1
+				if [ $n -eq $j -a "x$m" != "x$i" ]; then
+					eval "export -- \"$3=-1\""
+					return
+				fi
+			done
+		fi
+	done
+
+	eval "export -- \"$3=0\""
+	eval "export -- \"$4=\"\"$_values\"\"\""
+}
+
+freecwmp_config_cwmp() {
+	config_get __parameter "$1" "parameter"
+	config_get __value "$1" "value"
+	config_get __tags "$1" "tag"
+
+	if [ "$__parameter" = "$4" ]; then
+		if [ "get" = "$2" ]; then
+			if [ "value" = "$3" ]; then
+				eval "export -- \"$5=\"\"$__value\"\"\""
+			fi
+			if [ "tags" = "$3" ]; then
+				eval "export -- \"$5=\"\"$__tags\"\"\""
+			fi
+		elif [ "set" = "$2" ]; then
+			if [ "value" = "$3" ]; then
+				/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set freecwmp.$1.value=$5 2> /dev/null
+			fi
+		elif [ "check" = "$2" ]; then
+			if [ "parameter" = "$3" ]; then
+				eval "export -- \"$5=\"$1\"\""
+			fi
+		fi
+	fi
+}
+
+freecwmp_config_notifications() {
+	config_get __active "$1" "active"
+	config_get __passive "$1" "passive"
+
+	for item in $__active
+	do
+		if [ "$item" = "$3" ]; then
+			eval "export -- \"$4=2\""
+			return 0
+		fi
+	done
+	for item in $__passive
+	do
+		if [ "$item" = "$3" ]; then
+			eval "export -- \"$4=1\""
+			return 0
+		fi
+	done
+}
+
+freecwmp_get_parameter_value() {
+	local _dest="$1"
+	local _parm="$2"
+	local _val
+	config_foreach freecwmp_config_cwmp "cwmp" "get" "value" "$_parm" "_val"
+	eval "export -- \"$_dest=\"\"$_val\"\"\""
+}
+
+freecwmp_set_parameter_value() {
+	local _parm="$1"
+	local _val="$2"
+	config_foreach freecwmp_config_cwmp "cwmp" "check" "parameter" "$_parm" "_section"
+	if [ ! "$_section" = "" ]; then
+		/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set freecwmp.$_section.value=$_val 2> /dev/null
+	else
+		/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} batch << EOF 2>&1 >/dev/null
+			add freecwmp cwmp
+			set freecwmp.@cwmp[-1].parameter="$_parm"
+			set freecwmp.@cwmp[-1].value="$_val"
+EOF
+	fi
+	config_foreach freecwmp_config_notifications "notifications" "get" "$_parm" "tmp"
+	# TODO: notify freecwmpd about the change
+	# if [ "$tmp" -eq "2" ]; then
+	# fi
+}
+
+freecwmp_get_parameter_notification() {
+	local _dest="$1"
+	local _parm="$2"
+	local _val
+	config_foreach freecwmp_config_notifications "notifications" "get" "$_parm" "_val"
+	eval "export -- \"$_dest=$_val\""
+}
+
+freecwmp_set_parameter_notification() {
+	local _parm="$1"
+	local _val="$2"
+	local tmp=`/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get freecwmp.@notifications[0] 2>/dev/null`
+	if [ "$tmp" = "" ]; then
+		/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} add freecwmp notifications 2>&1 >/dev/null
+	else
+		/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} del_list "freecwmp.@notifications[0].passive=$_parm" 2>/dev/null
+		/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} del_list "freecwmp.@notifications[0].active=$_parm" 2>/dev/null
+	fi
+	if [ "$_val" -eq "1" ]; then
+		/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} add_list freecwmp.@notifications[0].passive="$_parm" 2>&1 >/dev/null
+	elif [ "$_val" -eq "2" ]; then
+		/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} add_list freecwmp.@notifications[0].active="$_parm" 2>&1 >/dev/null
+	fi
+}
+
+freecwmp_get_parameter_tags() {
+	local _dest="$1"
+	local _parm="$2"
+	config_foreach freecwmp_config_cwmp "cwmp" "get" "tags" "$_parm" "_tags"
+	eval "export -- \"$_dest=\"\"$_tags\"\"\""
+}
+
+freecwmp_set_parameter_tag() {
+	local _parm="$1"
+	local _tag="$2"
+	config_foreach freecwmp_config_cwmp "cwmp" "check" "parameter" "$_parm" "_section"
+	if [ ! "$_section" = "" ]; then
+		/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} add_list freecwmp.$_section.tag=$_tag 2> /dev/null
+	else
+		/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} batch << EOF 2>&1 >/dev/null
+			add freecwmp cwmp
+			set freecwmp.@cwmp[-1].parameter="$_parm"
+			add_list freecwmp.@cwmp[-1].tag="$_tag"
+EOF
+	fi
+}
+
+freecwmp_get_uci() {
+	local _parm="$1"
+	local _return_val="$2"
+	local _config="$3"
+	local _section="$4"
+	local _num="$5"
+	local _option="$6"
+
+	local _val=`/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get $_config.@$_section[$_num].$_option`
+	if [ "x$_parm" != "x" ]; then
+		freecwmp_value_output "$_parm" "$_val"
+	fi
+	if [ "x$_return_val" != "x" ]; then
+		eval "export -- \"$_return_val=\"\"$_val\"\"\""
+	fi
+}
+
+freecwmp_set_uci() {
+	local _config="$1"
+	local _section="$2"
+	local _num="$3"
+	local _option="$4"
+	local _val="$5"
+
+	/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set $_config.@$_section[$_num].$_option=$_val
+	/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit $_config
+}
+
+delay_service_restart() {
+local service="$1"
+local delay="$2"
+local lock="/tmp/freecwmp_$service"
+
+if [ ! -x "$lock" ]; then
+	cat > "$lock" <<EOF
+/etc/init.d/$service stop >/dev/null 2>/dev/null
+sleep $delay
+/etc/init.d/$service start >/dev/null 2>/dev/null
+rm "$lock"
+EOF
+	chmod +x "$lock"
+	sh "$lock" &
+fi
+}
+
+delay_command() {
+local name="$1"
+local command="$2"
+local delay="$3"
+local lock="/tmp/freecwmp_command_$name"
+
+if [ ! -x "$lock" ]; then
+	cat > "$lock" <<EOF
+sleep $delay
+$command >/dev/null 2>/dev/null
+rm "$lock"
+EOF
+	chmod +x "$lock"
+	sh "$lock" &
+fi
+}
+###########################inform ###########################
+get_device_info_cpu_utilization() {
+local idle1=`top -n 1 | grep idle | grep CPU | awk -F " " '{print $8}' | cut -d '%' -f1`
+local idle2=`top -n 1 | grep idle | grep CPU | awk -F " " '{print $8}' | cut -d '%' -f1`
+local idle3=`top -n 1 | grep idle | grep CPU | awk -F " " '{print $8}' | cut -d '%' -f1`
+local idle4=`top -n 1 | grep idle | grep CPU | awk -F " " '{print $8}' | cut -d '%' -f1`
+local idle5=`top -n 1 | grep idle | grep CPU | awk -F " " '{print $8}' | cut -d '%' -f1`
+local idle=$(($(($idle1 + $idle2 + $idle3 + $idle4 + $idle5)) / 5))
+local utilization=$((100 - $idle))
+local val="$utilization"%
+freecwmp_output "InternetGatewayDevice.DeviceInfo.cpu_utilization" "$val"
+}
+
+get_device_info_memory_utilization() {
+local val=`free | grep Mem | awk '{print $3-$6" / "$2}'`
+freecwmp_output "InternetGatewayDevice.DeviceInfo.memory_utilization" "$val"
+}
+
+get_device_info_flash_utilization() {
+local total=`test -f /etc/sysinfo.conf && cat /etc/sysinfo.conf | grep flash_size | cut -d '=' -f2 2> /dev/null`
+if [ "$total" = "" ] ;then
+        total="16"
+fi
+total=$((total*1024))
+local available=`df | grep overlayfs | grep \/overlay | awk -F " " '{print $4}'`
+local used=$(($total - $available))
+local utilization=$((100*$used/$total))
+local val="$used  / $total  "
+freecwmp_output "InternetGatewayDevice.DeviceInfo.flash_utilization" "$val"
+}
+
+get_device_info_uptime() {
+local val=`cat /proc/uptime | awk -F "." '{ print $1 }'`
+freecwmp_output "InternetGatewayDevice.DeviceInfo.UpTime" "$val"
+}
+
+get_device_info_wireless_ssid() {
+local i=0
+local val=""
+for i in 0 1 2 3
+do
+
+val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wireless.@wifi-iface[${i}].device 2> /dev/null`
+if [ "$val" == "wifi0" ]; then
+   val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wireless.@wifi-iface[${i}].ssid 2> /dev/null`
+   break;
+fi
+done
+freecwmp_output "InternetGatewayDevice.DeviceInfo.wireless_ssid" "$val"
+}
+
+get_device_info_wireless_key() {
+local i=0
+local val=""
+for i in 0 1 2 3
+do
+
+val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wireless.@wifi-iface[${i}].device 2> /dev/null`
+if [ "$val" == "wifi0" ]; then
+   val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wireless.@wifi-iface[${i}].key 2> /dev/null`
+   break;
+fi
+done
+if [ -z "$val" ]; then
+   val="N/A"
+fi
+freecwmp_output "InternetGatewayDevice.DeviceInfo.wireless_key" "$val"
+}
+
+get_device_info_wireless_enable(){
+local device=`/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wireless.@wifi-iface[0].device 2> /dev/null`
+local val=`/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wireless.@wifi-iface[0].disabled 2> /dev/null`
+if [ "" = "$device" -o "$val" = "1" ]; then
+  val="0"
+else
+  val="1"
+fi
+freecwmp_output "InternetGatewayDevice.DeviceInfo.wireless_enable" "$val"
+}
+
+get_device_info_wireless_channel_status() {
+local val2=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wireless.wifi0.channel 2> /dev/null`
+local val5=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wireless.wifi1.channel 2> /dev/null`
+#local val2=`iwinfo ath0 i 2>/dev/null | grep Channel |awk '{print $4}'`
+#local val5=`iwinfo ath1 i 2>/dev/null | grep Channel |awk '{print $4}'`
+local val="$val2/$val5"
+freecwmp_output "InternetGatewayDevice.DeviceInfo.wireless_channel_status" "$val"
+}
+
+get_device_info_port_state() {
+local val=`/usr/bin/lua -e '
+        local util = require("luci.util")
+        local ret = {}
+                 ret["port1"] = 0
+                 ret["port2"] = 0
+                 ret["port3"] = 0
+                 ret["port4"] = 0
+                 ret["port5"] = 0
+                 local index = 0
+
+                local swc = io.popen("swconfig dev switch0 show 2>/dev/null")
+
+                if swc then
+                        while true do
+                                local line = swc:read("*l")
+
+                                if not line then break end
+                                local   port = line:match("link: port:(%d+) link:up")
+                                if port ~= nil  then
+                                                                   index = port+ 1
+                                   --ret[#ret+1] = port + 1
+                                                                    ret["port"..index] = 1
+                                end
+                        end
+                end
+                                                                                                  
+    require("luci.json")                                                                              
+    local para=luci.json.encode(ret)                                                                  
+    print(para)                                                                                       
+'`
+freecwmp_output "InternetGatewayDevice.DeviceInfo.portstate" "$val"
+}
+
+get_device_info_wan_current_ip_addr() {
+local val=`lua -e '
+require("luci.util")
+require "luci.model.uci"
+local uci = luci.model.uci.cursor()
+local lp=uci.get("network","lan","proto") or ""
+local inf = nil
+if "dhcp" == lp then
+    inf = luci.util.ubus("network.interface.lan", "status") or { }
+else
+    inf = luci.util.ubus("network.interface.wan", "status") or { }
+end
+local ip=inf["ipv4-address"]
+if ip and ip[1] and ip[1]["address"] then
+    print(ip[1]["address"])
+end '`
+freecwmp_output "InternetGatewayDevice.DeviceInfo.wan_current_ip_addr" "$val"
+}
+
+get_device_info_work_mode() {
+local val="ROUTER"
+local mode=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get network.lan.proto 2> /dev/null`
+if [ "$mode" = "dhcp" ]; then
+   val="AP"
+fi
+freecwmp_output "InternetGatewayDevice.DeviceInfo.work_mode" "$val"
+}
+
+get_device_info_wifidog_enable() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wifidog.wifidog.wifidog_enable 2> /dev/null`
+if [ -z "$val" ]; then
+   val="0"
+fi
+freecwmp_output "InternetGatewayDevice.DeviceInfo.wifidog_enable" "$val"
+}
+
+get_wifi_client() {
+local val=`/usr/bin/lua /usr/share/freecwmp/functions/wificlient.lua`
+freecwmp_output "InternetGatewayDevice.LANDevice.1.Wireless.WiFiClient" "$val"
+}
+
+get_device_info_client_speed() {
+local val=""
+val=`ifconfig br-lan|grep bytes|awk -F 'bytes:' '{print $2,$3}'|awk '{print $1,$5}'`
+freecwmp_output "InternetGatewayDevice.DeviceInfo.client_speed" "$val"	
+}
+
+get_device_info() {
+case "$1" in
+	InternetGatewayDevice.DeviceInfo.cpu_utilization)
+	get_device_info_cpu_utilization 		
+	;;
+	InternetGatewayDevice.DeviceInfo.memory_utilization)
+        get_device_info_memory_utilization
+        ;;
+        InternetGatewayDevice.DeviceInfo.flash_utilization)
+        get_device_info_flash_utilization
+        ;;
+	InternetGatewayDevice.DeviceInfo.UpTime)
+	get_device_info_uptime
+	;;
+	InternetGatewayDevice.DeviceInfo.wireless_ssid)
+ 	get_device_info_wireless_ssid	
+	;;
+	InternetGatewayDevice.DeviceInfo.wireless_enable)
+	get_device_info_wireless_enable
+	;;
+	InternetGatewayDevice.DeviceInfo.wireless_key)
+	get_device_info_wireless_key
+	;;
+	InternetGatewayDevice.DeviceInfo.wireless_channel_status)
+	get_device_info_wireless_channel_status
+	;;
+	InternetGatewayDevice.DeviceInfo.portstate)
+	get_device_info_port_state
+	;;
+	InternetGatewayDevice.DeviceInfo.wan_current_ip_addr)
+	get_device_info_wan_current_ip_addr
+	;;
+	InternetGatewayDevice.DeviceInfo.work_mode)
+	get_device_info_work_mode
+	;;
+	InternetGatewayDevice.DeviceInfo.wifidog_enable)
+	get_device_info_wifidog_enable	
+	;;
+	InternetGatewayDevice.LANDevice.1.Wireless.WiFiClient)
+	get_wifi_client
+	;;
+	InternetGatewayDevice.DeviceInfo.client_speed)
+	get_device_info_client_speed
+	;;
+esac
+}
+get_device_info $1

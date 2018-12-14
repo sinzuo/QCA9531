@@ -1,0 +1,60 @@
+#!/usr/bin/lua
+require "luci.model.uci"
+local uci = luci.model.uci.cursor()
+local json = require("luci.json")
+local mode = "wifi0" 
+if 0 ~= #arg and "5.8G" == arg[1] then
+    mode="wifi1"
+end 
+local wd={
+	channel=uci:get("wireless",mode,"channel"),
+	country=uci:get("wireless",mode,"country"),
+	txpower=uci:get("wireless",mode,"txpower"),
+	htmode=uci:get("wireless",mode,"htmode"),
+	hwmode=uci:get("wireless",mode,"hwmode") or "auto",
+	rssi_thres=uci:get("wireless",mode,"rssi_thres")
+}
+local ifas={}
+ifas["wifi-device"]=wd
+local i = 1
+uci:foreach("wireless","wifi-iface",function(s)
+        local ifa={} 
+        local l_name = s[".name"]
+        local dev = uci:get("wireless",l_name,"device") 
+        if mode == dev then
+            ifa["device"]=dev
+            ifa["ssid"]=uci:get("wireless",l_name,"ssid")
+            ifa["encryption"]=uci:get("wireless",l_name,"encryption")
+            ifa["network"]=uci:get("wireless",l_name,"network")
+            ifa["pass"]=uci:get("wireless",l_name,"key") 
+	    if "none" == ifa["encryption"] then
+                ifa["pass"]="N/A" 
+	    end
+            local disa=uci:get("wireless",l_name,"disabled") or "0"
+            if "0" == disa then
+	        ifa["enable"]="1"
+	    else
+                ifa["enable"]="0"
+            end 
+            ifa["portal"]=uci:get("wireless",l_name,"portal") or "0"
+            ifa["maxsta"]=uci:get("wireless",l_name,"maxsta") 
+            ifa["isolate"]=uci:get("wireless",l_name,"isolate") or "0"
+            ifa["hidden"]=uci:get("wireless",l_name,"hidden") or "0"
+            ifa["commitatf"]=uci:get("wireless",l_name,"commitatf") or "0"
+            ifa["up"]=uci:get("wireless",l_name,"up")
+            ifa["down"]=uci:get("wireless",l_name,"down")
+            ifa["macfilter"]=uci:get("wireless",l_name,"macfilter") or "NULL"
+            if "wifi0" == mode then ifa["bcn_rate"]=uci:get("wireless",l_name,"bcn_rate") or "1000" end
+            if "NULL" ~= ifa["macfilter"] then
+                local ml_t = uci:get_list("wireless",l_name,"maclist") 
+                local ml_s = json.encode(ml_t)
+                ml_s=string.gsub(ml_s,"[:%[%]\"]","")
+                ml_s=string.gsub(ml_s,",","|")
+                ifa["maclist"]=ml_s
+            end 
+            ifas["wireless"..i]=ifa
+            i = i + 1
+        end 
+    end)
+print(json.encode(ifas))
+
