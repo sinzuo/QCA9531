@@ -1,0 +1,65 @@
+#!/bin/sh
+
+urlfilter_black()
+{
+mchain="Urlfilter_black"
+iptables -t filter -N $mchain >/dev/null 2>&1
+iptables -t filter -F $mchain >/dev/null 2>&1
+urllist=`/sbin/uci -q get sets.urlfilter.url`
+for url in `echo $urllist` ;do
+    iptables -t filter -I $mchain -m string --string $url --algo kmp -j DROP
+done
+inlan=$(iptables -t filter -L FORWARD  | grep $mchain)
+if [ "" == "$inlan" ]; then
+    iptables -t filter -I FORWARD 1 -j $mchain
+fi
+echo 1 > /proc/sys/net/bridge/bridge-nf-call-iptables
+}
+
+urlfilter_white()
+{
+mchain="Urlfilter_white"
+iptables -t filter -N $mchain >/dev/null 2>&1
+iptables -t filter -F $mchain >/dev/null 2>&1
+urllist=`/sbin/uci -q get sets.urlfilter.url`
+for url in `echo $urllist` ;do
+    iptables -t filter -I $mchain -m string --string $url --algo kmp -j ACCEPT 
+done
+inlan=$(iptables -t filter -L FORWARD  | grep $mchain)
+if [ "" == "$inlan" ]; then
+    iptables -t filter -I FORWARD 1 -j $mchain
+fi
+iptables -t filter -A $mchain -p tcp -m multiport --sports 80,443 -j DROP
+echo 1 > /proc/sys/net/bridge/bridge-nf-call-iptables
+}
+
+urlfilter_clean()
+{
+mchain_list="Urlfilter_white Urlfilter_black"
+for mchain in `echo $mchain_list`;do
+    iptables -t filter -F $mchain >/dev/null 2>&1
+    inlan=$(iptables -t filter -L FORWARD  | grep $mchain)
+    if [ "" != "$inlan" ]; then
+        iptables -t filter -D FORWARD -j $mchain >/dev/null 2>&1
+    fi
+    iptables -t filter -X $mchain >/dev/null 2>&1
+done
+}
+
+#exe
+if [ "-c" == "$1" ];then
+    urlfilter_clean
+    exit 0
+fi
+
+if [ "-s" == "$1" ];then
+    urltype=`/sbin/uci -q get sets.urlfilter.type`
+    if [ "black" == "$urltype" ]; then
+        urlfilter_clean
+        urlfilter_black
+    elif [ "white" == "$urltype" ]; then
+        urlfilter_clean
+        urlfilter_white
+    fi 
+fi
+

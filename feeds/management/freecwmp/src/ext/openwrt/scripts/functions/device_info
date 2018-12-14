@@ -1,0 +1,3825 @@
+#!/bin/sh
+
+get_device_info_manufacturer() {
+local val=`/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get freecwmp.@device[0].manufacturer 2> /dev/null`
+freecwmp_output "InternetGatewayDevice.DeviceInfo.Manufacturer" "$val"
+}
+
+get_device_info_oui() {
+local val=`/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get freecwmp.@device[0].oui 2> /dev/null`
+freecwmp_output "InternetGatewayDevice.DeviceInfo.ManufacturerOUI" "$val"
+}
+
+get_device_info_product_class() {
+local val=`cat /etc/sysinfo.conf | grep device_type | cut -d '=' -f2 2> /dev/null`
+freecwmp_output "InternetGatewayDevice.DeviceInfo.ProductClass" "$val"
+}
+
+get_device_info_product_model() {
+local val=`cat /proc/cpuinfo |grep machine|cut  -d ':' -f2 2> /dev/null`
+freecwmp_output "InternetGatewayDevice.DeviceInfo.ProductModel" "$val"
+}
+
+get_device_info_flash_size() {
+local val=`cat /etc/sysinfo.conf | grep flash_size | cut -d '=' -f2 2> /dev/null`
+freecwmp_output "InternetGatewayDevice.DeviceInfo.flash_size" "$val"
+}
+
+get_device_info_svn_version() {
+local val=`cat /etc/openwrt_version 2> /dev/null`
+freecwmp_output "InternetGatewayDevice.DeviceInfo.svn_version" "$val"
+}
+
+get_device_info_serial_number() {
+local val=`/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get freecwmp.@device[0].serial_number 2> /dev/null`
+freecwmp_output "InternetGatewayDevice.DeviceInfo.SerialNumber" "$val"
+}
+
+get_device_info_user_name() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get device_custom.@type_in[0].user_name 2> /dev/null`
+freecwmp_output "InternetGatewayDevice.DeviceInfo.user_name" "$val"
+}
+
+set_device_info_user_name() {
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set device_custom.@type_in[0].user_name="$1"
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit device_custom.@type_in[0].user_name
+#/etc/init.d/freecwmpd stop 2> /dev/null
+#/etc/init.d/freecwmpd start 2> /dev/null &
+echo 1 > /tmp/freecwmp_freecwmpd_need_restart.tmp
+}
+
+get_device_info_ip_outside() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get device.@type_in[0].ip_outside 2> /dev/null`
+freecwmp_output "InternetGatewayDevice.DeviceInfo.ip_outside" "$val"
+}
+
+get_device_info_port_outside() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get device.@type_in[0].port_outside 2> /dev/null`
+freecwmp_output "InternetGatewayDevice.DeviceInfo.port_outside" "$val"
+}
+
+get_device_info_portal_url() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get custom.global.redirect_url 2> /dev/null`
+freecwmp_output "InternetGatewayDevice.DeviceInfo.portal_url" "$val"
+}
+
+get_device_info_wifidog_portal() {
+local port=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wifidog.wifidog.gateway_httpport 2> /dev/null`
+local hostname=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wifidog.wifidog.gateway_hostname 2> /dev/null`
+local path=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wifidog.wifidog.gateway_path 2> /dev/null`
+local val={\'host\':\'${hostname}\',\'port\':\'${port}\',\'path\':\'${path}\'}
+freecwmp_output "InternetGatewayDevice.DeviceInfo.wifidog_portal" "$val"
+}
+
+get_device_info_wan_type() {
+local proto=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get network.wan.proto 2> /dev/null`
+local val=""
+if [ "$proto" = "dhcp" ]; then
+	local wifior=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get network.wan._wantype 2> /dev/null`
+	if [ "$wifior" = "wifi" ]; then
+	local dns=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get network.wan.dns 2> /dev/null`
+	val={\'wantype\':\'wifi\',\'dhcp\':{\'dns\':\'$dns\'},\'pppoe\':{\'auto\':1,\'user\':\'\',\'reg\':\'1\',\'dns\':\'\',\'pass\':\'\',\'demand\':0},\'static\':{\'mask\':\'\',\'gw\':\'\',\'dns\':\'\',\'ip\':\'\'}}
+	else
+	local dns=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get network.wan.dns 2> /dev/null`
+	val={\'wantype\':\'dhcp\',\'dhcp\':{\'dns\':\'$dns\'},\'pppoe\':{\'auto\':1,\'user\':\'\',\'reg\':\'1\',\'dns\':\'\',\'pass\':\'\',\'demand\':0},\'static\':{\'mask\':\'\',\'gw\':\'\',\'dns\':\'\',\'ip\':\'\'}}
+	fi
+elif [ "$proto" = "pppoe" ]; then
+	local user=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get network.wan.username 2> /dev/null`
+	local pass=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get network.wan.password 2> /dev/null`
+	local dns=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get network.wan.dns 2> /dev/null`
+	val={\'wantype\':\'pppoe\',\'pppoe\':{\'auto\':1,\'user\':\'$user\',\'reg\':\'1\',\'dns\':\'$dns\',\'pass\':\'$pass\',\'demand\':0},\'static\':{\'mask\':\'\',\'gw\':\'\',\'dns\':\'\',\'ip\':\'\'},\'dhcp\':{\'dns\':\'\'}}
+elif [ "$proto" = "static" ]; then
+	local netmask=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get network.wan.netmask 2> /dev/null`
+	local ipaddr=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get network.wan.ipaddr 2> /dev/null`
+	local dns=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get network.wan.dns 2> /dev/null`
+	local gateway=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get network.wan.gateway 2> /dev/null`
+	val={\'wantype\':\'static\',\'static\':{\'mask\':\'$netmask\',\'gw\':\'$gateway\',\'dns\':\'$dns\',\'ip\':\'$ipaddr\'},\'dhcp\':{\'dns\':\'\'},\'pppoe\':{\'auto\':1,\'user\':\'\',\'reg\':\'1\',\'dns\':\'\',\'pass\':\'\',\'demand\':0}}
+fi
+freecwmp_output "InternetGatewayDevice.DeviceInfo.wan_type" "$val"
+}
+
+get_device_info_wireless_threshold(){
+local inth=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wireless.wifi0.AssocReqRssiThres 2> /dev/null`
+local outth=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wireless.wifi0.KickStaRssiLow 2> /dev/null`
+local auth=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wireless.wifi0.AuthRssiThres 2> /dev/null`
+local channel=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wireless.wifi0.channel 2> /dev/null`
+local hwmode=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wireless.wifi0.hwmode 2> /dev/null`
+local lower_rate=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wireless.wifi0.lowrate 2> /dev/null`
+local rssi_thres=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wireless.wifi0.rssi_thres 2> /dev/null`
+local auth_count=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wireless.wifi0.auth_count 2> /dev/null`
+local probe_count=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wireless.wifi0.probe_count 2> /dev/null`
+local mode=""
+case "$hwmode" in
+	11b)
+	mode="1"
+	;;
+	11g)
+	mode="4"
+	;;
+	11ng)
+	mode="7"
+	;;
+	*)
+	mode=""
+	;;
+esac
+local txpower=`/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wireless.wifi0.txpower 2> /dev/null`
+#local txpower_per="100"
+#local pro=$(get_product_class)
+#case "$pro" in
+#	AP100|AP200)
+#	if [ -z "$txpower" ] ;then 
+#            txpower_per="100" 
+#        else
+#	    txpower_per=`lua -e "print(string.format(\"%.1f\","$txpower"/20) * 100)"`
+#        fi
+#	;;
+#	AC100|AC200)
+#	if [ -z "$txpower" ] ;then 
+#            txpower_per="100" 
+#        else
+#	    txpower_per=`lua -e "print(string.format(\"%.1f\","$txpower"/23) * 100)"`
+#        fi
+#        ;;
+#	AH100|AH200|AC300)
+#	if [ -z "$txpower" ] ;then 
+#            txpower_per="100" 
+#        else
+#	    txpower_per=`lua -e "print(string.format(\"%.1f\","$txpower"/30) * 100)"`
+#        fi
+#        ;;
+#	AH300|AH301)
+#	if [ -z "$txpower" ] ;then 
+#            txpower_per="100" 
+#        else
+#	    txpower_per=`lua -e "print(string.format(\"%.1f\","$txpower"/30) * 100)"`
+#        fi
+#        ;;
+#esac
+val={\'type\':\'1\',\'inthreshold\':\'$inth\',\'outthreshold\':\'$outth\',\'channel\':\'$channel\',\'mode\':\'$mode\',\'hwmode\':\'$hwmode\',\'txpower\':\'$txpower\',\'authreshold\':\'$auth\',\'lower_rate\':\'$lower_rate\',\'rssi_thres\':\'$rssi_thres\',\'auth_count\':\'$auth_count\',\'probe_count\':\'$probe_count\'}
+freecwmp_output "InternetGatewayDevice.DeviceInfo.wireless_threshold" "$val"
+}
+
+get_device_info_wireless_threshold_5G(){
+local inth=`/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wireless.wifi1.AssocReqRssiThres 2> /dev/null`
+local outth=`/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wireless.wifi1.KickStaRssiLow 2> /dev/null`
+local auth=`/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wireless.wifi1.AuthRssiThres 2> /dev/null`
+local channel=`/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wireless.wifi1.channel 2> /dev/null`
+local hwmode=`/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wireless.wifi1.hwmode 2> /dev/null`
+local txpower=`/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wireless.wifi1.txpower 2> /dev/null`
+local lower_rate=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wireless.wifi1.lowrate 2> /dev/null`
+local rssi_thres=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wireless.wifi1.rssi_thres 2> /dev/null`
+local auth_count=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wireless.wifi1.auth_count 2> /dev/null`
+#local txpower_per="100"
+#local pro=$(get_product_class)
+#case "$pro" in
+#	AP100|AP200)
+#	if [ -z "$txpower" ] ;then 
+#            txpower_per="100" 
+#        else
+#	    txpower_per=`lua -e "print(string.format(\"%.1f\","$txpower"/20) * 100)"`
+#        fi
+#	;;
+#	AC100|AC200)
+#	if [ -z "$txpower" ] ;then 
+#            txpower_per="100" 
+#        else
+#	    txpower_per=`lua -e "print(string.format(\"%.1f\","$txpower"/23) * 100)"`
+#        fi
+#        ;;
+#	AH100|AH200|AC300)
+#	if [ -z "$txpower" ] ;then 
+#            txpower_per="100" 
+#        else
+#	    txpower_per=`lua -e "print(string.format(\"%.1f\","$txpower"/30) * 100)"`
+#        fi
+#        ;;
+#	AH300|AH301)
+#	if [ -z "$txpower" ] ;then 
+#            txpower_per="100" 
+#        else
+#	    txpower_per=`lua -e "print(string.format(\"%.1f\","$txpower"/30) * 100)"`
+#        fi
+#        ;;
+#esac
+local val={\'channel\':\'$channel\',\'hwmode\':\'$hwmode\',\'txpower\':\'$txpower\',\'inthreshold\':\'$inth\',\'outthreshold\':\'$outth\',\'authreshold\':\'$auth\',\'lower_rate\':\'$lower_rate\',\'rssi_thres\':\'$rssi_thres\',\'auth_count\':\'$auth_count\'}
+freecwmp_output "InternetGatewayDevice.DeviceInfo.wireless_threshold_5G" "$val"
+}
+
+get_device_info_wifidog_enable() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wifidog.wifidog.wifidog_enable 2> /dev/null`
+if [ -z "$val" ]; then           
+   val="0"                                                                        
+fi 
+freecwmp_output "InternetGatewayDevice.DeviceInfo.wifidog_enable" "$val"
+}
+
+get_device_info_lbd_enable() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get lbd.config.Enable 2> /dev/null`
+if [ -z "$val" ]; then
+   val="0"
+fi
+freecwmp_output "InternetGatewayDevice.DeviceInfo.lbd_enable" "$val"
+}
+
+get_device_info_aproam2gto5g_enable() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get aproam.2gto5g.enable 2> /dev/null`
+if [ -z "$val" ]; then
+   val="0"
+fi
+freecwmp_output "InternetGatewayDevice.DeviceInfo.aproam2gto5g_enable" "$val"
+}
+
+get_device_info_urlfilter_type() {
+local val=`/sbin/uci -q get sets.urlfilter.type | tr -d "\n"`
+if [ -z "$val" ]; then           
+   val=""                                                                        
+fi 
+freecwmp_output "InternetGatewayDevice.DeviceInfo.urlfilter_type" "$val"
+}
+
+get_device_info_urlfilter_list() {
+local val=`/sbin/uci -q get sets.urlfilter.url | tr " " "|"`
+if [ -z "$val" ]; then           
+   val=""                                                                        
+fi 
+freecwmp_output "InternetGatewayDevice.DeviceInfo.urlfilter_list" "$val"
+}
+
+get_device_info_white_mac() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wifidog.wifidog.white_mac 2> /dev/null`
+if [ -z "$val" ]; then           
+   val="00:00:00:00:00:00"                                                                         
+fi 
+freecwmp_output "InternetGatewayDevice.DeviceInfo.white_mac" "$val"
+}
+get_device_info_black_mac() {
+#local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wifidog.wifidog.black_mac 2> /dev/null`
+#if [ -z "$val" ]; then           
+#   val=""                                                                        
+#fi 
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get pifii.server.black_mac 2> /dev/null`
+if [ -z "$val" ]; then           
+   val=""                                                                        
+fi 
+freecwmp_output "InternetGatewayDevice.DeviceInfo.black_mac" "$val"
+}
+
+parse_json(){
+#echo $1 | grep $2 | sed 's/.*'$2':\([^,}]*\).*/\1/'
+echo $1 | grep -E "[^a-z]$2[^a-z]" | sed 's/.*[^a-z]'$2':\([^,}]*\).*/\1/'
+}
+
+get_device_info_white_list1() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wifidog.wifidog.whitelist 2> /dev/null`
+if [ -z "$val" ]; then           
+   val=""                                                                        
+fi 
+val=`echo $val |tr -s " " ","`
+freecwmp_output "InternetGatewayDevice.DeviceInfo.white_list1" "$val"
+}
+
+get_device_info_white_list2() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wifidog.wifidog.white_list2 2> /dev/null`
+if [ -z "$val" ]; then           
+   val="www.pifii.cn"                                                                        
+fi 
+freecwmp_output "InternetGatewayDevice.DeviceInfo.white_list2" "$val"
+}
+
+get_device_info_white_list3() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wifidog.wifidog.white_list3 2> /dev/null`
+if [ -z "$val" ]; then           
+   val="www.pifii.cn"                                                                        
+fi 
+freecwmp_output "InternetGatewayDevice.DeviceInfo.white_list3" "$val"
+}
+
+get_device_info_weixing_pass() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wifidog.wifidog.weixing_pass 2> /dev/null`
+if [ -z "$val" ]; then           
+   val=0                                                                        
+fi 
+freecwmp_output "InternetGatewayDevice.DeviceInfo.weixing_pass" "$val"
+}
+
+get_device_info_lan_auth() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wifidog.wifidog.lan_auth 2> /dev/null`
+if [ -z "$val" ]; then           
+   val=0                                                                        
+fi 
+freecwmp_output "InternetGatewayDevice.DeviceInfo.lan_auth" "$val"
+}
+
+get_device_info_free_no_auth() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wifidog.wifidog.free_no_auth 2> /dev/null`
+if [ -z "$val" ]; then           
+   val=1                                                                        
+fi 
+freecwmp_output "InternetGatewayDevice.DeviceInfo.free_no_auth" "$val"
+}
+
+get_device_info_weixing_pass_interval() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wifidog.wifidog.weixing_pass_interval 2> /dev/null`
+if [ -z "$val" ]; then           
+   val=0                                                                        
+fi 
+freecwmp_output "InternetGatewayDevice.DeviceInfo.weixing_pass_interval" "$val"
+}
+
+get_device_info_debug_result() {
+local val=""   
+if [ -f /tmp/debug_result ]; then                   
+val=`cat /tmp/debug_result`       
+fi                                              
+if [ -z "$val" ]; then           
+   val="No debug result!"                                                                        
+fi 
+freecwmp_output "InternetGatewayDevice.DeviceInfo.debug_result" "$val"	
+}	
+
+set_device_info_portal_url() {
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set custom.global.redirect_url="$1"
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit custom.global.redirect_url
+echo 1 > /tmp/freecwmp_httpredirect_need_restart.tmp
+}
+
+
+set_device_info_wifidog_enable() {
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wifidog.wifidog.wifidog_enable="$1"
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit wifidog.wifidog.wifidog_enable
+echo 1 > /tmp/freecwmp_wifidog_need_restart.tmp
+}
+
+set_device_info_lbd_enable() {
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set lbd.config.Enable="$1"
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit lbd.config.Enable
+/etc/init.d/lbd restart 2>/dev/null &
+}
+
+set_device_info_aproam2gto5g_enable() {
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set aproam.2gto5g.enable="$1"
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit aproam.2gto5g.enable
+/etc/init.d/aproam restart 2>/dev/null &
+}
+
+set_device_info_urlfilter_type() {
+test -f /etc/config/sets || touch /etc/config/sets 
+local sec=`/sbin/uci -q get sets.urlfilter`
+if [ "" == "$sec" ]; then
+/sbin/uci -q set sets.urlfilter=urlfilter
+fi
+/sbin/uci -q set sets.urlfilter.type="$1"
+/sbin/uci -q commit sets
+}
+
+set_device_info_urlfilter_list() {
+test -f /etc/config/sets || touch /etc/config/sets
+local sec=`/sbin/uci -q get sets.urlfilter`
+if [ "" == "$sec" ]; then
+/sbin/uci -q set sets.urlfilter=urlfilter
+fi
+/sbin/uci -q delete sets.urlfilter.url
+for var in `echo "$1" | sed 's/|/ /g'`;do 
+    /sbin/uci -q add_list sets.urlfilter.url="$var"
+done 
+/sbin/uci -q commit sets
+urlfilter_cmd="/usr/share/freecwmp/functions/urlfilter"
+test -f $urlfilter_cmd && $urlfilter_cmd -s
+}
+
+set_device_info_white_mac() {
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wifidog.wifidog.white_mac="$1"
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit wifidog.wifidog.white_mac
+echo 1 > /tmp/freecwmp_wifidog_need_restart.tmp
+}
+set_device_info_black_mac() {
+local val=${1//&quot\;/\"}
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set pifii.server.black_mac="$val"
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit pifii.server.black_mac
+echo 1 > /tmp/freecwmp_wifidog_need_restart.tmp
+}
+
+
+
+set_device_info_white_list1() {
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} delete wifidog.wifidog.whitelist
+if [ "$1" != "N/A" ]; then 
+    for var in `echo "$1" | tr -s "," " "`;do 
+        /sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} add_list wifidog.wifidog.whitelist="$var"
+    done
+fi
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit wifidog.wifidog.whitelist
+echo 1 > /tmp/freecwmp_wifidog_need_restart.tmp
+}
+
+set_device_info_white_list2() {
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wifidog.wifidog.white_list2="$1"
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit wifidog.wifidog.white_list2
+echo 1 > /tmp/freecwmp_wifidog_need_restart.tmp
+}
+
+set_device_info_white_list3() {
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wifidog.wifidog.white_list3="$1"
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit wifidog.wifidog.white_list3
+echo 1 > /tmp/freecwmp_wifidog_need_restart.tmp
+}
+
+set_device_info_weixing_pass() {
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wifidog.wifidog.weixing_pass="$1"
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit wifidog.wifidog.weixing_pass
+echo 1 > /tmp/freecwmp_wifidog_need_restart.tmp
+}
+
+set_device_info_lan_auth() {
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wifidog.wifidog.lan_auth="$1"
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit wifidog.wifidog.lan_auth
+echo 1 > /tmp/freecwmp_wifidog_need_restart.tmp
+}
+
+
+set_device_info_MonWifi() {
+if [ "$1" == "off" ]; then
+  
+  rm /tmp/mon 2>/dev/null
+  
+else
+  touch /tmp/mon
+  killall -9 llink 2>/dev/null
+  if [ "$1" == "on" ]; then
+     llink&
+    else
+     llink -s $1 & 
+  fi   
+fi
+}
+
+set_device_info_MonURL() {
+if [ "$1" == "off" ]; then
+#  ebtables -t nat -F PREROUTING
+#  ebtables -t nat -A PREROUTING -j Rateshape_Incoming
+#  ebtables -t broute -F
+#  iptables -t nat -D PREROUTING -p tcp --dport 80 -j REDIRECT --to-ports 8118
+#  killall -9 url 2>/dev/null
+  rm /tmp/url 2>/dev/null 
+else
+  touch /tmp/url
+  killall -9 llink 2>/dev/null
+  if [ "$1" == "on" ]; then
+     llink&
+    else
+     llink -s $1 & 
+  fi  
+#  url /etc/url/config 
+#  iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-ports 8118
+  
+#  ebtables -t nat -I PREROUTING 1 --logical-in br-lan -p ipv4 -j redirect --redirect-target ACCEPT
+#  ebtables -t nat -I PREROUTING 1 --logical-in br-lan -p arp -j ACCEPT 
+#  ebtables -t nat -I PREROUTING 1 --ip-dst 255.255.255.255 -p ipv4 -j ACCEPT 
+#  ebtables -t nat -I PREROUTING 1 -p IPv4 --ip-protocol udp --ip-destination-port 67:68 -j ACCEPT 
+fi
+}
+
+set_device_info_adbyebye() {
+if [ "$1" == "off" ]; then
+  ebtables -t nat -F PREROUTING
+  ebtables -t nat -A PREROUTING -j Rateshape_Incoming
+  ebtables -t broute -F
+  iptables -t nat -D PREROUTING -p tcp --dport 80 -j REDIRECT --to-ports 8118
+  killall -9 adbyby 2>/dev/null
+  
+else
+  killall -9 adbyby 2>/dev/null
+  if [ "$1" == "on" ]; then
+  /sbin/adbyby/adbyby 2>/dev/null &
+  iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-ports 8118
+  ebtables -t nat -I PREROUTING 1 --logical-in br-lan -p ipv4 -j redirect --redirect-target ACCEPT
+  ebtables -t nat -I PREROUTING 1 --logical-in br-lan -p arp -j ACCEPT 
+  ebtables -t nat -I PREROUTING 1 --ip-dst 255.255.255.255 -p ipv4 -j ACCEPT 
+  ebtables -t nat -I PREROUTING 1 -p IPv4 --ip-protocol udp --ip-destination-port 67:68 -j ACCEPT 
+  fi	    
+fi
+}
+
+set_device_info_free_no_auth() {
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wifidog.wifidog.free_no_auth="$1"
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit wifidog.wifidog.free_no_auth
+}
+
+
+set_device_info_weixing_pass_interval() {
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wifidog.wifidog.weixing_pass_interval="$1"
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit wifidog.wifidog.weixing_pass_interval
+echo 1 > /tmp/freecwmp_wifidog_need_restart.tmp
+}
+
+set_device_info_debug_command(){
+local val1=${1//@/ }
+local val=${val1//amp;/}
+killall -9 debug
+echo "#!/bin/sh">/tmp/debug
+echo $val>>/tmp/debug
+/bin/sh /tmp/debug>/tmp/debug_result&
+}	
+
+set_device_info_wifidog_portal() {
+local com=`echo $1`
+local host=$(parse_json $com "host")
+local port=$(parse_json $com "port")
+local path=$(parse_json $com "path")
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wifidog.wifidog.gateway_httpport="$port"
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wifidog.wifidog.gateway_hostname="$host"
+if [ "$path" != "" ]; then
+	/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wifidog.wifidog.gateway_path="$path"
+fi
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit wifidog
+echo 1 > /tmp/freecwmp_wifidog_need_restart.tmp
+}
+
+
+set_device_info_wan_type() {
+local com=`echo $1`
+echo $com > /tmp/proto
+#com={"pass":"123456","proto":"pppoe","user":"iosios"}
+local type=$(parse_json $com "proto")
+echo $type >> /tmp/proto
+if [ "$type" == "dhcp" ]; then
+	local dns=$(parse_json $com "dns")
+	/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set network.wan.proto="dhcp"
+	if ["$dns" != $com];then
+	/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set network.wan.dns=$dns
+	else
+	/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} delete network.wan.dns
+	fi
+elif [ "$type" == "pppoe" ]; then
+	local user=$(parse_json $com "user")
+	local pass=$(parse_json $com "pass")
+	/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set network.wan.proto="pppoe"
+	/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set network.wan.username=$user
+	/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set network.wan.password=$pass
+elif [ "$type" == "static" ]; then
+	local ipaddr=$(parse_json $com "ip")
+	local netmask=$(parse_json $com "mask")
+	local gateway=$(parse_json $com "gw")
+	local dns=$(parse_json $com "dns")
+	/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set network.wan.proto="static"
+	/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set network.wan.netmask=$netmask
+	/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set network.wan.ipaddr=$ipaddr
+	/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set network.wan.gateway=$gateway
+	/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set network.wan.dns=$dns
+fi
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit network
+#/etc/init.d/network restart
+}
+
+set_device_info_debug_remote(){
+type=$(parse_json $1 "type")
+host=$(parse_json $1 "host")
+port=$(parse_json $1 "port")
+password=$(parse_json $1 "password")
+echo "#!/bin/sh">/tmp/debug
+#echo "sshpass -p '$password' ssh -y  -R ${port}:localhost:22 root@${host} >/dev/null 2>&1 &" >>/tmp/debug
+echo "sshpass -p \"wifi&2016\" ssh -N -y -R ${host}:${port}:127.0.0.1:22 -l lanzl ${host} -p 22000 &" >> /tmp/debug
+/bin/sh /tmp/debug>/tmp/debug_result&
+}
+
+set_device_info_wireless_threshold(){
+type=$(parse_json $1 "type")
+inth=$(parse_json $1 "inthreshold")
+outth=$(parse_json $1 "outthreshold")
+auth=$(parse_json $1 "authreshold")
+channel=$(parse_json $1 "channel")
+mode=$(parse_json $1 "mode")
+#txpower_per=$(parse_json $1 "txpower")
+txpower=$(parse_json $1 "txpower")
+lower_rate=$(parse_json $1 "lower_rate")
+rssi_thres=$(parse_json $1 "rssi_thres")
+auth_count=$(parse_json $1 "auth_count")
+probe_count=$(parse_json $1 "probe_count")
+
+#9531 not AssocReqRssiThres and KickStaRssiLow
+if [ "$inth" != "" -a "$inth" != "NULL" -a "$inth" != "N/A" ]; then
+	/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.wifi0.AssocReqRssiThres="$inth"
+fi
+if [ "$outth" != "" -a "$outth" != "NULL" -a "$outth" != "N/A" ]; then
+	/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.wifi0.KickStaRssiLow="$outth"
+fi
+if [ "$auth" != "" -a "$auth" != "NULL" -a "$auth" != "N/A" ]; then
+	/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.wifi0.AuthRssiThres="$auth"
+fi
+
+if [ "$channel" != "" -a "$channel" != "NULL" -a "$channel" != "N/A" ]; then
+	/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.wifi0.channel="$channel"
+fi
+
+#default value 11ng
+hwmode=""
+case "$mode" in 
+	1)
+	hwmode="11b"	
+	;;
+	4)
+	hwmode="11g"	
+	;;
+	7)
+	hwmode="11ng"
+	;;
+	*)
+	hwmode=""
+	;;
+esac
+if [ "$hwmode" != "" ]; then
+	/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.wifi0.hwmode="$hwmode"
+else
+	/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} delete wireless.wifi0.hwmode
+fi
+#if [ "$txpower_per" != "" -a "$txpower_per" != "NULL" -a "$txpower_per" != "N/A" ]; then
+if [ "$txpower" != "" -a "$txpower" != "NULL" -a "$txpower" != "N/A" ]; then
+	/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.wifi0.txpower="$txpower"
+fi
+if [ "$lower_rate" != "" -a "$lower_rate" != "NULL" -a "$lower_rate" != "N/A" ]; then
+	/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.wifi0.lowrate="$lower_rate"
+fi
+if [ "$rssi_thres" != "" -a "$rssi_thres" != "NULL" -a "$rssi_thres" != "N/A" ]; then
+	/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.wifi0.rssi_thres="$rssi_thres"
+fi
+if [ "$auth_count" != "" -a "$auth_count" != "NULL" -a "$auth_count" != "N/A" ]; then
+	/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.wifi0.auth_count="$auth_count"
+fi
+if [ "$probe_count" != "" -a "$probe_count" != "NULL" -a "$probe_count" != "N/A" ]; then
+	/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.wifi0.probe_count="$probe_count"
+fi
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit wireless
+echo 1 > /tmp/freecwmp_wireless_need_restart.tmp
+}
+
+set_device_info_wireless_threshold_5G(){
+inth=$(parse_json $1 "inthreshold")
+outth=$(parse_json $1 "outthreshold")
+auth=$(parse_json $1 "authreshold")
+channel=$(parse_json $1 "channel")
+hwmode=$(parse_json $1 "hwmode")
+#txpower_per=$(parse_json $1 "txpower")
+txpower=$(parse_json $1 "txpower")
+lower_rate=$(parse_json $1 "lower_rate")
+rssi_thres=$(parse_json $1 "rssi_thres")
+auth_count=$(parse_json $1 "auth_count")
+
+if [ "$inth" != "" -a "$inth" != "NULL" -a "$inth" != "N/A" ]; then
+	/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.wifi1.AssocReqRssiThres="$inth"
+fi
+if [ "$outth" != "" -a "$outth" != "NULL" -a "$outth" != "N/A" ]; then
+	/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.wifi1.KickStaRssiLow="$outth"
+fi
+if [ "$auth" != "" -a "$auth" != "NULL" -a "$auth" != "N/A" ]; then
+	/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.wifi1.AuthRssiThres="$auth"
+fi
+if [ "$channel" != "" -a "$channel" != "NULL" -a "$channel" != "N/A" ]; then
+	/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.wifi1.channel="$channel"
+fi
+if [ "$hwmode" != "" -a "$hwmode" != "NULL" -a "$hwmode" != "N/A" ]; then
+	/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.wifi1.hwmode="$hwmode"
+else
+	/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} delete wireless.wifi1.hwmode
+fi
+#if [ "$txpower_per" != "" -a "$txpower_per" != "NULL" -a "$txpower_per" != "N/A" ]; then
+if [ "$txpower" != "" -a "$txpower" != "NULL" -a "$txpower" != "N/A" ]; then
+	/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.wifi1.txpower="$txpower"
+fi
+if [ "$lower_rate" != "" -a "$lower_rate" != "NULL" -a "$lower_rate" != "N/A" ]; then
+	/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.wifi1.lowrate="$lower_rate"
+fi
+if [ "$rssi_thres" != "" -a "$rssi_thres" != "NULL" -a "$rssi_thres" != "N/A" ]; then
+	/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.wifi1.rssi_thres="$rssi_thres"
+fi
+if [ "$auth_count" != "" -a "$auth_count" != "NULL" -a "$auth_count" != "N/A" ]; then
+	/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.wifi1.auth_count="$auth_count"
+fi
+/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit wireless
+echo 1 > /tmp/freecwmp_wireless_need_restart.tmp
+}
+
+get_device_info_board_name() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get system.sysglobal.hostname 2> /dev/null`
+freecwmp_output "InternetGatewayDevice.DeviceInfo.board_name" "$val"
+}
+
+get_device_info_root_password() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get account.account.pass 2> /dev/null`
+freecwmp_output "InternetGatewayDevice.DeviceInfo.root_password" "$val"
+}
+
+set_device_info_root_password() {
+xjchangerootpwd.sh "$1" 2>&1 > /dev/null
+}
+
+get_device_info_snmp_v3_password() {
+freecwmp_output "InternetGatewayDevice.DeviceInfo.snmp_v3_password" "not supported"
+}
+
+set_device_info_snmp_v3_password() {
+/sbin/xjchangesnmpv3up.sh "$1"
+}
+
+get_device_info_work_mode() {
+local val="ROUTER"
+local mode=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get network.lan.proto 2> /dev/null`
+if [ "$mode" = "dhcp" ]; then                                         
+   val="AP" 
+fi   
+freecwmp_output "InternetGatewayDevice.DeviceInfo.work_mode" "$val"
+}
+
+set_device_info_work_mode() {
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set custom.global.mode="$1"
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit custom.global.mode
+echo 1 > /tmp/freecwmp_need_reboot.tmp
+#sleep 1
+#reboot
+}
+
+set_device_info_qos() {
+local val1=`brctl show br-lan | grep eth2.1 2>/dev/null`
+local val2=`brctl show br-lan | grep eth2.2 2>/dev/null`
+local val=0
+if [ "$val1" = "" ] || [ "$val2" = "" ]; then 
+   val=1
+fi
+if [ "$val" = "0" ]; then 
+    /sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set qos.lan.enabled="$1"  
+    /sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit qos.lan.enabled
+ else
+  /sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set qos.wan.enabled="$1"
+  /sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit qos.wan.enabled
+fi  
+/etc/init.d/qos restart 2>/dev/null &
+
+}
+
+get_device_info_qos() {
+local val1=`brctl show br-lan | grep eth2.1 2>/dev/null`
+local val2=`brctl show br-lan | grep eth2.2 2>/dev/null`
+local val=0
+if [ "$val1" = "" ] || [ "$val2" = "" ]; then 
+   val=1
+fi
+if [ "$val" = "0" ]; then     
+  val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get qos.lan.enabled 2> /dev/null`	
+else
+  val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get qos.wan.enabled 2> /dev/null`
+fi
+
+freecwmp_output "InternetGatewayDevice.DeviceInfo.qos_enabled" "$val"
+}
+
+set_device_info_qos_upload() {
+local val1=`brctl show br-lan | grep eth0.1 2>/dev/null`
+local val2=`brctl show br-lan | grep eth0.2 2>/dev/null`
+local val=0
+if [ "$val1" = "" ] || [ "$val2" = "" ]; then 
+   val=1
+fi
+if [ "$val" = "0" ]; then 
+    /sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set qos.lan.upload="$1"  
+    /sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit qos.lan.upload
+ else
+  /sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set qos.wan.upload="$1"
+  /sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit qos.wan.upload
+fi  
+}
+
+get_device_info_qos_upload() {
+local val1=`brctl show br-lan | grep eth2.1 2>/dev/null`
+local val2=`brctl show br-lan | grep eth2.2 2>/dev/null`
+local val=0
+if [ "$val1" = "" ] || [ "$val2" = "" ]; then 
+   val=1
+fi
+if [ "$val" = "0" ]; then     
+  val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get qos.lan.upload 2> /dev/null`	
+else
+  val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get qos.wan.upload 2> /dev/null`
+fi
+
+freecwmp_output "InternetGatewayDevice.DeviceInfo.qos_upload" "$val"
+}
+
+set_device_info_qos_download() {
+local val1=`brctl show br-lan | grep eth2.1 2>/dev/null`
+local val2=`brctl show br-lan | grep eth2.2 2>/dev/null`
+local val=0
+if [ "$val1" = "" ] || [ "$val2" = "" ]; then 
+   val=1
+fi
+if [ "$val" = "0" ]; then 
+    /sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set qos.lan.download="$1"  
+    /sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit qos.lan.download
+ else
+  /sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set qos.wan.download="$1"
+  /sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit qos.wan.download
+fi  
+}
+
+get_device_info_qos_download() {
+local val1=`brctl show br-lan | grep eth2.1 2>/dev/null`
+local val2=`brctl show br-lan | grep eth2.2 2>/dev/null`
+local val=0
+if [ "$val1" = "" ] || [ "$val2" = "" ]; then 
+   val=1
+fi
+if [ "$val" = "0" ]; then     
+  val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get qos.lan.download 2> /dev/null`	
+else
+  val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get qos.wan.download 2> /dev/null`
+fi
+
+freecwmp_output "InternetGatewayDevice.DeviceInfo.qos_download" "$val"
+}
+
+get_device_info_wan_current_ip_addr() {
+local val=`lua -e '
+require("luci.util")
+require "luci.model.uci"
+local uci = luci.model.uci.cursor()
+local lp=uci.get("network","lan","proto") or ""
+local inf = nil
+if "dhcp" == lp then
+    inf = luci.util.ubus("network.interface.lan", "status") or { }
+else
+    inf = luci.util.ubus("network.interface.wan", "status") or { }
+end
+local ip=inf["ipv4-address"]
+if ip and ip[1] and ip[1]["address"] then
+    print(ip[1]["address"])
+end '`
+freecwmp_output "InternetGatewayDevice.DeviceInfo.wan_current_ip_addr" "$val"
+}
+
+##//add by ldw
+
+get_device_info_wan_static_ip() {
+	local val=""
+	local mode=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get custom.global.mode 2> /dev/null`
+if [ "$mode" = "ap" ]; then
+	val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get network.lan.ipaddr 2> /dev/null`
+else
+	val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get network.wan.ipaddr 2> /dev/null`
+fi
+freecwmp_output "InternetGatewayDevice.DeviceInfo.wan_static_ip" "$val"
+}
+
+set_device_info_wan_static_ip() {
+local mode=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get custom.global.mode 2> /dev/null`
+if [ "$mode" = "ap" ]; then
+	/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set network.lan.ipaddr="$1"
+else
+	/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set network.wan.ipaddr="$1"
+fi
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit network
+}
+
+get_device_info_wan_network_protocol() {
+local val=""
+local mode=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get custom.global.mode 2> /dev/null`
+if [ "$mode" = "ap" ]; then
+	val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get network.lan.proto 2> /dev/null` 
+else
+	val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get network.wan.proto 2> /dev/null`
+fi
+freecwmp_output "InternetGatewayDevice.DeviceInfo.wan_network_protocol" "$val" 
+}
+
+set_device_info_wan_network_protocol() {
+local mode=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get custom.global.mode 2> /dev/null`
+if [ "$mode" = "ap" ]; then
+	/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set network.lan.proto="$1"
+else
+	/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set network.wan.proto="$1"
+fi
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit network
+echo 1 > /tmp/freecwmp_network_need_restart.tmp
+}
+
+get_device_info_wan_network_mask() {
+local val=""
+local local mode=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get custom.global.mode 2> /dev/null`
+if [ "$mode" = "ap" ]; then
+	val=`/sbin/ifconfig br-lan | sed -n '/Mask:/ s/Mask://pg' | awk -F " " '{print $4}'`
+else
+	val=`/sbin/ifconfig eth0.2 | sed -n '/Mask:/ s/Mask://pg' | awk -F " " '{print $4}'`
+fi
+freecwmp_output "InternetGatewayDevice.DeviceInfo.wan_network_mask" "$val"
+}
+
+set_device_info_wan_network_mask() {
+local local mode=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get custom.global.mode 2> /dev/null`
+if [ "$mode" = "ap" ]; then
+	/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set network.lan.netmask="$1"
+else
+	/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set network.wan.netmask="$1"
+fi
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit network
+}
+
+get_device_info_wan_network_gateway() {
+local val=""
+local local mode=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get custom.global.mode 2> /dev/null`
+if [ "$mode" = "ap" ]; then
+	val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get network.lan.gateway 2> /dev/null`
+else
+	val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get network.wan.gateway 2> /dev/null`
+fi
+freecwmp_output "InternetGatewayDevice.DeviceInfo.wan_network_gateway" "$val"
+}
+
+set_device_info_wan_network_gateway() {
+local local mode=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get custom.global.mode 2> /dev/null`
+if [ "$mode" = "ap" ]; then
+	/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set network.lan.gateway="$1"
+else
+	/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set network.wan.gateway="$1"
+fi
+echo nameserver $1 > /etc/resolv.conf
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit network
+}
+
+
+get_device_info_memory_utilization() {
+local val=`free | grep Mem | awk '{print $3-$6" / "$2}'`
+freecwmp_output "InternetGatewayDevice.DeviceInfo.memory_utilization" "$val"
+}
+
+get_device_info_flash_utilization() {
+local total=`test -f /etc/sysinfo.conf && cat /etc/sysinfo.conf | grep flash_size | cut -d '=' -f2 2> /dev/null`
+if [ "$total" = "" ] ;then
+	total="16"
+fi
+total=$((total*1024))
+local available=`df | grep overlayfs | grep \/overlay | awk -F " " '{print $4}'`
+local used=$(($total - $available))
+local utilization=$((100*$used/$total))
+local val="$used  / $total  "
+freecwmp_output "InternetGatewayDevice.DeviceInfo.flash_utilization" "$val"
+}
+
+get_device_info_cpu_utilization() {
+local idle1=`top -n 1 | grep idle | grep CPU | awk -F " " '{print $8}' | cut -d '%' -f1`
+local idle2=`top -n 1 | grep idle | grep CPU | awk -F " " '{print $8}' | cut -d '%' -f1`
+local idle3=`top -n 1 | grep idle | grep CPU | awk -F " " '{print $8}' | cut -d '%' -f1`
+local idle4=`top -n 1 | grep idle | grep CPU | awk -F " " '{print $8}' | cut -d '%' -f1`
+local idle5=`top -n 1 | grep idle | grep CPU | awk -F " " '{print $8}' | cut -d '%' -f1`
+local idle=$(($(($idle1 + $idle2 + $idle3 + $idle4 + $idle5)) / 5))
+local utilization=$((100 - $idle))
+local val="$utilization"%
+freecwmp_output "InternetGatewayDevice.DeviceInfo.cpu_utilization" "$val"
+}
+
+get_device_info_ping_test_result() {
+local address=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get custom.global.ping_test_address 2> /dev/null`
+if [ "$address" = "" ]; then
+   local val=""
+    else
+   local val='ping -c 4 $address '
+fi
+
+freecwmp_output "InternetGatewayDevice.DeviceInfo.ping_test_result" "$val"
+}
+
+get_device_info_ping_test_address() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get custom.global.ping_test_address 2> /dev/null`
+freecwmp_output "InternetGatewayDevice.DeviceInfo.ping_test_address" "$val"
+}
+
+set_device_info_ping_test_address() {
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set custom.global.ping_test_address="$1"
+}
+
+get_device_info_ap_mode_manage_addr_switch() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get custom.global.ap_mode_manage 2> /dev/null`
+if [ "$val" = "yes" ]; then
+	val=1
+else
+	val=0
+fi
+freecwmp_output "InternetGatewayDevice.DeviceInfo.ap_mode_manage_addr_switch" "$val"
+}
+
+set_device_info_download_speed() {
+echo  1242322 > /tmp/down_result
+/usr/share/busybox wget -O /dev/null  "$1" &
+ping -c10 www.baidu.com > /tmp/ping_result & 
+}
+
+set_device_info_softprobe_enable() {
+softprobe  "$1" & 
+}
+
+#set_device_info_pagespeed_enable() {
+#local value="curl -k --head --connect-timeout 5 "$1" -w \"ResponseTime:%{time_total}\n\" 2>&1 | grep -E \"HTTP/1.1|ResponseTime:\""
+#local val=`${value}`
+#echo  $value #> /tmp/pagespeed_result
+#}
+set_device_info_pagespeed_enable() {
+local val=`/usr/bin/lua -e '
+        local util = require("luci.util")
+        local curl_cmd = "curl -k --head --connect-timeout 5 ".."www.baidu.com".."  -w \"ResponseTime:%{time_total}\n\" 2>&1 | grep -E \"HTTP/1.1|ResponseTime:\""
+        local reqs_str = util.exec(curl_cmd)
+        reqs_str = string.gsub(reqs_str,"%s","")
+        local num = nil
+        local is_ok = string.find(reqs_str,"HTTP/1.1200OK")
+        if is_ok then
+            local len_str = string.gsub(reqs_str,"HTTP/1.1200OK","")
+            local l_num = string.gsub(len_str,"ResponseTime:","")
+            num = string.gsub(l_num," ","")
+            print(tonumber(num))
+	else
+	    print("N/A")
+        end --if is_ok then                                                                          
+'`
+echo  $val > /tmp/pagespeed_result
+}
+
+set_device_info_pkg_sendaddr() {
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set tcpdump.tcpdump.destIp="$1"
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit tcpdump
+}
+
+set_device_info_pkg_sendport() {
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set tcpdump.tcpdump.port="$1"
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit tcpdump
+}
+
+set_device_info_pkg_enable() {
+if [ "$1" = "1" ]; then
+	/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set  tcpdump.tcpdump.status=enable
+else
+	/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set  tcpdump.tcpdump.status=disable
+fi
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit tcpdump
+/etc/init.d/tcpdump restart &
+}
+
+get_device_info_pkg_sendaddr() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get tcpdump.tcpdump.destIp 2> /dev/null`
+freecwmp_output "InternetGatewayDevice.DeviceInfo.pkg_sendaddr" "$val"
+}
+
+get_device_info_pkg_sendport() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get tcpdump.tcpdump.port 2> /dev/null`
+freecwmp_output "InternetGatewayDevice.DeviceInfo.pkg_sendport" "$val"
+}
+get_device_info_pkg_enable() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get tcpdump.tcpdump.status 2> /dev/null`
+if [ "$val" = "enable" ]; then
+  val="1"
+else
+  val="0"
+fi
+freecwmp_output "InternetGatewayDevice.DeviceInfo.pkg_enable" "$val"
+}
+
+set_device_info_traceroute_enable() {
+/usr/share/busybox traceroute "$1" > /tmp/trace.tmp & 
+}
+
+get_device_info_traceroute_result() {
+local val=""   
+if [ -f /tmp/trace.tmp ]; then                   
+val=`cat /tmp/trace.tmp`       
+fi                                              
+if [ -z "$val" ]; then           
+   val="0"                                                                        
+fi 
+freecwmp_output "InternetGatewayDevice.DeviceInfo.traceroute_result" "$val"	
+}
+
+set_device_info_netstat_enable() {
+/usr/share/busybox netstat  > /tmp/netstat.tmp & 
+}
+
+get_device_info_netstat_result() {
+local val=""   
+if [ -f /tmp/netstat.tmp ]; then                   
+val=`cat /tmp/netstat.tmp`       
+fi                                              
+if [ -z "$val" ]; then           
+   val="0"                                                                        
+fi 
+freecwmp_output "InternetGatewayDevice.DeviceInfo.netstat" "$val"	
+}
+
+
+set_device_info_nslookup_enable() {
+/usr/share/busybox nslookup www.baidu.com > /tmp/nslookup.tmp & 
+}
+
+get_device_info_nslookup_result() {
+local val=""   
+if [ -f /tmp/nslookup.tmp ]; then                   
+val=`cat /tmp/nslookup.tmp`       
+fi                                              
+if [ -z "$val" ]; then           
+   val="0"                                                                        
+fi 
+freecwmp_output "InternetGatewayDevice.DeviceInfo.nslookup" "$val"	
+}
+
+set_device_info_post_message() {
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set pifii.post.message="$1"
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit pifii.post.message
+}
+
+set_device_info_post_enable() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get pifii.post.message 2> /dev/null`
+postenable.sh $val "$1" 2>&1 > /dev/null
+}
+
+set_device_info_freecwmp_ipport() {
+#local hostname=`echo "$1"|cut -d \: -f 1`
+#local port=`echo "$1"|cut -d \: -f 2`
+#local path=`echo "$1"|cut -d \: -f 3`
+url="$1"
+proto=${url%//*}
+if [ "$proto" = "$url"  ];then
+    proto=""
+    tmp_url=$url
+else
+    proto=`echo "$proto" | tr -d ":"`
+    tmp_url=${url#*//}
+fi
+path=${tmp_url#*/}
+if [ "$path" = "$tmp_url" ];then
+    path="/"
+    tmp_url=`echo "$tmp_url" | tr -d "/"`
+else
+    path="/$path"
+    tmp_url=${tmp_url%%/*}
+fi
+hostname=`echo "$tmp_url" | awk -F: '{print $1}'`
+port=`echo "$tmp_url" | awk -F: '{print $2}'`
+
+if [ "" = "$port" ]; then
+    port="80"
+fi
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set freecwmp.@acs[0].port="$port"
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set freecwmp.@acs[0].hostname="$hostname"
+if [ "$path" != "" ]; then
+	/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set freecwmp.@acs[0].path="$path"
+fi
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit freecwmp
+#/etc/init.d/freecwmpd restart  2>&1 > /dev/null &
+echo 1 > /tmp/freecwmp_freecwmpd_need_restart.tmp
+}
+
+get_device_info_freecwmp_ipport() {
+local port=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get freecwmp.@acs[0].port 2> /dev/null`
+local hostname=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get freecwmp.@acs[0].hostname 2> /dev/null`
+local path=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get freecwmp.@acs[0].path 2> /dev/null`
+local val=${hostname}:${port}:${path}
+freecwmp_output "InternetGatewayDevice.DeviceInfo.freecwmp_ipport" "$val"	
+}
+
+get_device_info_register_url() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get pifii.server.url 2> /dev/null`
+freecwmp_output "InternetGatewayDevice.DeviceInfo.register_url" "$val"	
+}
+
+set_device_info_register_url() {
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set pifii.server.url="$1"
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit pifii.server.url
+}
+
+
+
+get_device_info_download_speed() {
+local val=""   
+if [ -f /tmp/down_speed ]; then                   
+val=`cat /tmp/down_speed`       
+fi                                              
+if [ -z "$val" ]; then           
+   val="0"                                                                        
+fi 
+freecwmp_output "InternetGatewayDevice.DeviceInfo.down_speed" "$val"	
+}
+
+get_device_info_softprobe_result() {
+local val=""   
+if [ -f /tmp/softprobe_result ]; then                   
+val=`cat /tmp/softprobe_result`       
+fi                                              
+if [ -z "$val" ]; then           
+   val="0"                                                                        
+fi 
+freecwmp_output "InternetGatewayDevice.DeviceInfo.softprobe_result" "$val"	
+}
+
+get_device_info_pagespeed_result() {
+local val=""   
+if [ -f /tmp/pagespeed_result ]; then                   
+val=`cat /tmp/pagespeed_result`       
+fi                                              
+if [ -z "$val" ]; then           
+   val="0"                                                                        
+fi 
+freecwmp_output "InternetGatewayDevice.DeviceInfo.pagespeed_result" "$val"	
+}
+
+
+
+get_device_info_port_state() {
+local val=`/usr/bin/lua -e '
+        local util = require("luci.util")
+        local ret = {}
+                 ret["port1"] = 0
+                 ret["port2"] = 0
+                 ret["port3"] = 0
+                 ret["port4"] = 0
+                 ret["port5"] = 0
+                 local index = 0
+
+                local swc = io.popen("swconfig dev switch0 show 2>/dev/null")
+
+                if swc then
+                        while true do
+                                local line = swc:read("*l")
+
+                                if not line then break end
+                                local   port = line:match("link: port:(%d+) link:up")
+                                if port ~= nil  then
+                                                                   index = port+ 1
+                                   --ret[#ret+1] = port + 1
+                                                                    ret["port"..index] = 1
+                                end
+                        end
+                end
+                                                                                                  
+    require("luci.json")                                                                              
+    local para=luci.json.encode(ret)                                                                  
+    print(para)                                                                                       
+'`
+freecwmp_output "InternetGatewayDevice.DeviceInfo.portstate" "$val"	
+}
+
+get_device_info_ping_result() {
+local val=""   
+if [ -f /tmp/ping_result ]; then                   
+val=`cat /tmp/ping_result|grep loss`       
+fi                                              
+if [ -z "$val" ]; then           
+   val="0"                                                                        
+fi 
+freecwmp_output "InternetGatewayDevice.DeviceInfo.ping_result" "$val"	
+}
+
+get_device_info_client_speed() {
+local val=""
+val=`ifconfig br-lan|grep bytes|awk -F 'bytes:' '{print $2,$3}'|awk '{print $1,$5}'`
+freecwmp_output "InternetGatewayDevice.DeviceInfo.client_speed" "$val"	
+}
+
+
+
+set_device_info_ap_mode_manage_addr_switch() {
+if [ "$1" = "0" ]; then
+	/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set custom.global.ap_mode_manage="no"
+else
+	/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set custom.global.ap_mode_manage="yes"
+fi
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit custom.global.ap_mode_manage
+echo 1 > /tmp/freecwmp_network_need_restart.tmp
+}
+
+get_device_info_ap_mode_manage_ip() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get custom.global.manage_ipaddr 2> /dev/null`
+freecwmp_output "InternetGatewayDevice.DeviceInfo.ap_mode_manage_ip" "$val"
+}
+
+set_device_info_ap_mode_manage_ip() {
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set custom.global.manage_ipaddr="$1"
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit custom.global.manage_ipaddr
+echo 1 > /tmp/freecwmp_network_need_restart.tmp
+}
+
+#get_device_info_client_traffic() {
+#/sbin/xjusertraffic.sh > /tmp/usertraffic.tmp
+#local val=`cat /tmp/usertraffic.tmp`
+#freecwmp_output "InternetGatewayDevice.DeviceInfo.client_traffic" "$val"
+#rm /tmp/usertraffic.tmp
+#}
+
+get_device_info_led_mode() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get custom.global.ledmode 2> /dev/null`
+freecwmp_output "InternetGatewayDevice.DeviceInfo.led_mode" "$val"
+}
+
+set_device_info_led_mode() {
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set custom.global.ledmode="$1"
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit custom.global.ledmode
+echo 1 > /tmp/freecwmp_need_reboot.tmp
+}
+
+get_device_info_wshaper_switch() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get qos_auth.upload.total_bandwidth 2> /dev/null`
+if [ "$val" == "" ]; then
+	val="0"
+else
+	val="1"
+fi
+freecwmp_output "InternetGatewayDevice.DeviceInfo.wshaper_switch" "$val"
+}
+
+set_device_info_wshaper_switch() {
+if [ "$1" = "0" ]; then
+	/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} delete qos_auth.upload.total_bandwidth
+	/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} delete qos_auth.download.total_bandwidth
+	/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit qos_auth
+fi
+echo 1 > /tmp/freecwmp_qos_restart.tmp
+}
+
+get_device_info_wshaper_uplink() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get qos_auth.upload.total_bandwidth 2> /dev/null`
+freecwmp_output "InternetGatewayDevice.DeviceInfo.wshaper_uplink" "$val"
+}
+
+set_device_info_wshaper_uplink() {
+if [ "$1" != "N/A" ]; then 
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set qos_auth.upload.total_bandwidth="$1"
+else
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} delete qos_auth.upload.total_bandwidth
+fi
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit qos_auth.upload
+echo 1 > /tmp/freecwmp_qos_restart.tmp
+}
+
+get_device_info_wshaper_downlink() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get qos_auth.download.total_bandwidth 2> /dev/null`
+freecwmp_output "InternetGatewayDevice.DeviceInfo.wshaper_downlink" "$val"
+}
+
+set_device_info_wshaper_downlink() {
+if [ "$1" != "N/A" ]; then 
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set qos_auth.download.total_bandwidth="$1"
+else
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} delete qos_auth.download.total_bandwidth
+fi
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit qos_auth.download
+echo 1 > /tmp/freecwmp_qos_restart.tmp
+}
+
+get_device_info_HT40_noscan() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wireless.wifi0.noscan 2> /dev/null`
+freecwmp_output "InternetGatewayDevice.DeviceInfo.HT40_noscan" "$val"
+}
+
+set_device_info_HT40_noscan() {
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.wifi0.noscan="$1"
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit wireless.wifi0.noscan
+echo 1 > /tmp/freecwmp_wireless_need_restart.tmp
+}
+
+get_device_info_language() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get luci.main.lang 2> /dev/null`
+if [ "$val" = "zh_cn" ]; then
+	val="zh_CN"
+fi
+freecwmp_output "InternetGatewayDevice.DeviceInfo.language" "$val"
+}
+
+set_device_info_language() {
+local val="$1"
+if [ "$val" = "zh_CN" ]; then
+	val="zh_cn"
+fi
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set luci.main.lang="$val"
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit luci.main.lang
+}
+
+get_device_info_wireless_disable() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wireless.wifi0.disabled 2> /dev/null`
+freecwmp_output "InternetGatewayDevice.DeviceInfo.wireless_disabled" "$val"
+}
+
+set_device_info_wireless_disable() {
+/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.wifi0.disabled="$1"
+/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit wireless.wifi0.disabled
+echo 1 > /tmp/freecwmp_wireless_need_restart.tmp
+}
+
+get_device_info_wireless_restart() {
+freecwmp_output "InternetGatewayDevice.DeviceInfo.wireless_disabled" "not supported"
+}
+
+set_device_info_wireless_restart() {
+sleep 1
+/sbin/wifi &>/dev/null
+/sbin/enable_portal &>/dev/null
+}
+
+get_device_info_wireless_key() {
+local enc=$(get_wifi_iface "2.4G" "1" "encryption")
+local val=$(get_wifi_iface "2.4G" "1" "key")
+if [ "$enc" == "none" ]; then           
+   val="N/A"                                                                        
+fi	
+freecwmp_output "InternetGatewayDevice.DeviceInfo.wireless_key" "$val"
+}
+
+get_device_info_wireless_key_5G() {
+local enc=$(get_wifi_iface "5.8G" "1" "encryption")
+local val=$(get_wifi_iface "5.8G" "1" "key")
+if [ "$enc" == "none" ]; then           
+   val="N/A"                                                                        
+fi	
+freecwmp_output "InternetGatewayDevice.DeviceInfo.wireless_key_5G" "$val"
+}
+
+get_device_info_wireless_key2() {
+local enc=$(get_wifi_iface "2.4G" "2" "encryption")
+local val=$(get_wifi_iface "2.4G" "2" "key")
+if [ "$enc" == "none" ]; then           
+   val="N/A"                                                                        
+fi	
+freecwmp_output "InternetGatewayDevice.DeviceInfo.wireless_key2" "$val"
+}
+
+get_device_info_wireless_key3() {
+local enc=$(get_wifi_iface "2.4G" "3" "encryption")
+local val=$(get_wifi_iface "2.4G" "3" "key")
+if [ "$enc" == "none" ]; then           
+   val="N/A"                                                                        
+fi	
+freecwmp_output "InternetGatewayDevice.DeviceInfo.wireless_key3" "$val"
+}
+
+get_device_info_wireless_key4() {
+local enc=$(get_wifi_iface "2.4G" "4" "encryption")
+local val=$(get_wifi_iface "2.4G" "4" "key")
+if [ "$enc" == "none" ]; then           
+   val="N/A"                                                                        
+fi	
+freecwmp_output "InternetGatewayDevice.DeviceInfo.wireless_key4" "$val"
+}
+ 
+get_device_info_wireless_key2_5G() {
+local enc=$(get_wifi_iface "5.8G" "2" "encryption")
+local val=$(get_wifi_iface "5.8G" "2" "key")
+if [ "$enc" == "none" ]; then           
+   val="N/A"                                                                        
+fi	
+freecwmp_output "InternetGatewayDevice.DeviceInfo.wireless_key2_5G" "$val"
+}
+
+get_device_info_wireless_key3_5G() {                                                                 
+local enc=$(get_wifi_iface "5.8G" "3" "encryption")                                                               
+local val=$(get_wifi_iface "5.8G" "3" "key")                                                                    
+if [ "$enc" == "none" ]; then                                                                                   
+   val="N/A"                                                                                                    
+fi                                                                                                              
+freecwmp_output "InternetGatewayDevice.DeviceInfo.wireless_key3_5G" "$val"                                      
+}                                                          
+
+get_device_info_wireless_key4_5G() { 
+local enc=$(get_wifi_iface "5.8G" "4" "encryption") 
+local val=$(get_wifi_iface "5.8G" "4" "key") 
+if [ "$enc" == "none" ]; then 
+   val="N/A" 
+fi 
+freecwmp_output "InternetGatewayDevice.DeviceInfo.wireless_key4_5G" "$val" 
+}                                                          
+
+get_device_info_wireless_ssid() {
+local val=$(get_wifi_iface "2.4G" "1" "ssid")
+freecwmp_output "InternetGatewayDevice.DeviceInfo.wireless_ssid" "$val"
+}
+
+get_device_info_wireless_ssid_5G() {
+local val=$(get_wifi_iface "5.8G" "1" "ssid")
+freecwmp_output "InternetGatewayDevice.DeviceInfo.wireless_ssid_5G" "$val"
+}
+
+get_device_info_wireless_ssid2() {
+local val=$(get_wifi_iface "2.4G" "2" "ssid")
+freecwmp_output "InternetGatewayDevice.DeviceInfo.wireless_ssid2" "$val"
+}
+
+get_device_info_wireless_ssid3() {
+local val=$(get_wifi_iface "2.4G" "3" "ssid")
+freecwmp_output "InternetGatewayDevice.DeviceInfo.wireless_ssid3" "$val"
+}
+
+get_device_info_wireless_ssid4() {
+local val=$(get_wifi_iface "2.4G" "4" "ssid")
+freecwmp_output "InternetGatewayDevice.DeviceInfo.wireless_ssid4" "$val"
+}
+
+
+get_device_info_wireless_ssid2_5G() {
+local val=$(get_wifi_iface "5.8G" "2" "ssid")
+freecwmp_output "InternetGatewayDevice.DeviceInfo.wireless_ssid2_5G" "$val"
+}
+
+get_device_info_wireless_ssid3_5G() {
+local val=$(get_wifi_iface "5.8G" "3" "ssid")
+freecwmp_output "InternetGatewayDevice.DeviceInfo.wireless_ssid3_5G" "$val"
+}
+
+get_device_info_wireless_ssid4_5G() {
+local val=$(get_wifi_iface "5.8G" "4" "ssid")
+freecwmp_output "InternetGatewayDevice.DeviceInfo.wireless_ssid4_5G" "$val"
+}
+
+get_device_info_wireless_create(){
+local val1=$(get_wifi_iface "2.4G" "1" "ssid")
+local val2=$(get_wifi_iface "2.4G" "2" "ssid")
+local  val3=""
+if [ -z "$val2" ]; then  
+	val3="N/A"	
+else
+	val3=$val2
+fi
+local  val=$val1:$val3
+freecwmp_output "InternetGatewayDevice.DeviceInfo.wireless_create" "$val"
+}
+
+set_device_info_wireless_create(){
+local type=$(parse_json $1 "type")
+local enable=$(parse_json $1 "enable")
+local ssid=$(parse_json $1 "ssid")
+local password=$(parse_json $1 "password")
+local portal=$(parse_json $1 "portal")
+local i=0
+local val=""
+local val2=""
+local second=0
+for i in 0 1 2 3 4 5
+do
+
+  val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wireless.@wifi-iface[${i}].device 2> /dev/null`
+  if [ -z "$val" ]; then           
+   break;                                                                        
+  fi
+
+  if [ "$val" == "wifi0" ]; then
+   if [ $second == 1 ]; then 
+    val2=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wireless.@wifi-iface[${i}].ssid 2> /dev/null`
+    break;
+   fi
+   second=1
+  fi 
+    	
+done	                                                                                               
+if [ -z "$val2" ]; then                                                                                                  
+if [ "$ssid" != "N/A" ]; then                                                                                                                                                                                     
+	/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} add wireless wifi-iface    
+	if [ "$password" != "N/A" ]; then 
+		/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].encryption=psk+psk2
+		/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].key=$password
+	else
+	/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].encryption=none
+	fi
+	/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} delete wireless.@wifi-iface[${i}].disabled                                
+fi                                                                                                                      
+fi                                                                                                                      
+if [ "$ssid" != "N/A" ]; then                                                                                              
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].device=wifi0                                 
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].mode=ap                                     
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].ssid=$ssid                                     
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].network=lan
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].portal=$portal
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} delete wireless.@wifi-iface[${i}].disabled                            
+else                                                                                                                    
+# /sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} delete wireless.@wifi-iface[${i}]     
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].disabled=1                                    
+fi                                                                                                                     
+uci commit   wireless                                                                                                          
+                                                                                                                        
+ echo 1 > /tmp/freecwmp_wireless_need_restart.tmp       
+}
+
+get_device_info_wireless_enable(){
+local device=$(get_wifi_iface "2.4G" "1" "device")
+local val=$(get_wifi_iface "2.4G" "1" "disabled")
+if [ "N/A" = "$device" -o "$val" = "1" ]; then
+  val="0"
+else
+  val="1"
+fi
+freecwmp_output "InternetGatewayDevice.DeviceInfo.wireless_enable" "$val"
+}
+get_device_info_wireless_enable2(){
+local device=$(get_wifi_iface "2.4G" "2" "device")
+local val=$(get_wifi_iface "2.4G" "2" "disabled")
+if [ "N/A" = "$device" -o "$val" = "1" ]; then
+  val="0"
+else
+  val="1"
+fi
+freecwmp_output "InternetGatewayDevice.DeviceInfo.wireless_enable2" "$val" 
+}
+set_device_info_wireless_enable(){
+local val="$1"
+if [ "$val" = "1" ]; then
+  val="0"
+else
+  val="1"
+fi
+set_wifi_iface "2.4G" "1" "disabled" "$val" && echo 1 > /tmp/freecwmp_wireless_need_restart.tmp
+}
+
+get_device_info_wireless_value_5G(){
+local val=$(lua /usr/share/freecwmp/functions/get_wireless_info 5.8G)
+freecwmp_output "InternetGatewayDevice.DeviceInfo.wireless_value_5G" "$val" 
+}
+
+set_device_info_wireless_value_5G(){
+local index=$(parse_json $1 "index")
+local enable=$(parse_json $1 "enable")
+local ssid=$(parse_json $1 "ssid")
+local nw=$(parse_json $1 "network")
+local password=$(parse_json $1 "password")
+local portal=$(parse_json $1 "portal")
+local mf=$(parse_json $1 "macfilter")
+local ml=$(parse_json $1 "maclist")
+local ms=$(parse_json $1 "maxsta")
+local hid=$(parse_json $1 "hidden")
+local iso=$(parse_json $1 "isolate")
+local commitatf=$(parse_json $1 "commitatf")
+local up=$(parse_json $1 "up")
+local down=$(parse_json $1 "down")
+#echo "$index $enable $ssid $password $portal"
+[ "$index" -lt 1 -o "$index" -gt 8 ] 2>/dev/null && return 1
+[ "$ssid" == "N/A" -o  "" == "$ssid" ] && return 1
+local i=$(get_wifi_iface_index "5.8G" "$index")
+if [ "N/A" == "$i" ];then
+    i=$(grep wifi-iface /etc/config/wireless | wc  -l 2>/dev/null) 
+    /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} add wireless wifi-iface 
+    /sbin/uci -q commit wireless
+    /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].device=wifi1
+    #/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].network=lan
+    /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].mode=ap
+fi
+/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].ssid=$ssid
+if [ "$password" == "N/A" -o "" == "$password" ]; then
+    /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].encryption=none
+else
+    /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].encryption=psk2 
+    /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].key=$password
+fi
+if [ "$nw" == "" -o "$nw" == "N/A" -o "$nw" == "NULL" ] ;then
+    /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].network="lan"
+else
+    /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].network="$nw"
+fi
+if [ "$enable" == "0" ] ;then
+    /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].disabled="1"
+else
+    /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].disabled="0"
+fi 
+if [ "$portal" == "1" ] ;then
+    /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].portal="1"
+else
+    /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].portal="0"
+fi 
+if [ "$hid" == "1" ] ;then
+    /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].hidden="1"
+else
+    /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].hidden="0"
+fi
+if [ "$iso" == "1" ] ;then
+    /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].isolate="1"
+else
+    /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].isolate="0"
+fi
+if [ "$commitatf" == "1" ] ;then
+    /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].commitatf="1"
+else
+    /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].commitatf="0"
+fi
+if [ "$ms" == "" -o "$ms" == "N/A" -o "$ms" == "NULL" ] ;then
+    /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].maxsta="25"
+else
+    /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].maxsta="$ms"
+fi
+if [ "$up" != "" -a "$up" != "N/A" -a "$up" != "NULL" ] ;then
+    /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].up="$up"
+fi
+if [ "$down" != "" -a "$down" != "N/A" -a "$down" != "NULL" ] ;then
+    /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].down="$down"
+fi
+if [ "$mf" != "deny" -a "$mf" != "allow" ] ;then
+    /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} delete wireless.@wifi-iface[${i}].macfilter
+    /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} delete wireless.@wifi-iface[${i}].maclist
+else
+    /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} delete wireless.@wifi-iface[${i}].maclist
+    /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].macfilter="$mf"
+    local mac=""
+    for var in `echo "$ml" | sed 's/|/ /g'`;do 
+        len=$(echo -n "$var" | wc -c)
+        if [ "12" == "$len" ] ;then
+            mac="${var:0:2}:${var:2:2}:${var:4:2}:${var:6:2}:${var:8:2}:${var:10:2}" 
+            /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} add_list wireless.@wifi-iface[${i}].maclist="$mac"
+        fi
+    done 
+fi
+/sbin/uci -q commit wireless
+echo 1 > /tmp/freecwmp_wireless_need_restart.tmp
+}
+
+get_device_info_wireless_value(){
+local val=$(lua /usr/share/freecwmp/functions/get_wireless_info 2.4G)
+freecwmp_output "InternetGatewayDevice.DeviceInfo.wireless_value" "$val" 
+}
+
+set_device_info_wireless_value(){
+local index=$(parse_json $1 "index")
+local enable=$(parse_json $1 "enable")
+local ssid=$(parse_json $1 "ssid")
+local nw=$(parse_json $1 "network")
+local password=$(parse_json $1 "password")
+local portal=$(parse_json $1 "portal")
+local mf=$(parse_json $1 "macfilter")
+local ml=$(parse_json $1 "maclist")
+local ms=$(parse_json $1 "maxsta")
+local hid=$(parse_json $1 "hidden")
+local iso=$(parse_json $1 "isolate")
+local commitatf=$(parse_json $1 "commitatf")
+local bcn_rate=$(parse_json $1 "bcn_rate")
+local up=$(parse_json $1 "up")
+local down=$(parse_json $1 "down")
+#echo "$index $enable $ssid $password $portal"
+[ "$index" -lt 1 -o "$index" -gt 8 ] 2>/dev/null && return 1
+[ "$ssid" == "N/A" -o  "" == "$ssid" ] && return 1
+local i=$(get_wifi_iface_index "2.4G" "$index")
+if [ "N/A" == "$i" ];then
+    i=$(grep wifi-iface /etc/config/wireless | wc  -l 2>/dev/null) 
+    /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} add wireless wifi-iface 
+    /sbin/uci -q commit wireless
+    /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].device=wifi0 
+    #/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].network=lan
+    /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].mode=ap
+fi
+/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].ssid=$ssid
+if [ "$password" == "N/A" -o "" == "$password" ]; then
+    /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].encryption=none
+else
+    /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].encryption=psk2 
+    /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].key=$password
+fi
+if [ "$nw" == "" -o "$nw" == "N/A" -o "$nw" == "NULL" ] ;then
+    /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].network="lan"
+else
+    /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].network="$nw"
+fi
+if [ "$enable" == "0" ] ;then
+    /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].disabled="1"
+else
+    /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].disabled="0"
+fi 
+if [ "$portal" == "1" ] ;then
+    /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].portal="1"
+else
+    /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].portal="0"
+fi 
+if [ "$hid" == "1" ] ;then
+    /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].hidden="1"
+else
+    /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].hidden="0"
+fi 
+if [ "$iso" == "1" ] ;then
+    /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].isolate="1"
+else
+    /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].isolate="0"
+fi 
+if [ "$commitatf" == "1" ] ;then
+    /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].commitatf="1"
+else
+    /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].commitatf="0"
+fi
+if [ "$ms" == "" -o "$ms" == "N/A" -o "$ms" == "NULL" ] ;then
+    /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].maxsta="25"
+else
+    /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].maxsta="$ms"
+fi 
+if [ "$bcn_rate" != "" -a "$bcn_rate" != "N/A" -a "$bcn_rate" != "NULL" ] ;then
+    /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].bcn_rate="$bcn_rate"
+fi 
+if [ "$up" != "" -a "$up" != "N/A" -a "$up" != "NULL" ] ;then
+    /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].up="$up"
+fi
+if [ "$down" != "" -a "$down" != "N/A" -a "$down" != "NULL" ] ;then
+    /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].down="$down"
+fi
+if [ "$mf" != "deny" -a "$mf" != "allow" ] ;then
+    /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} delete wireless.@wifi-iface[${i}].macfilter
+    /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} delete wireless.@wifi-iface[${i}].maclist
+else
+    /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} delete wireless.@wifi-iface[${i}].maclist
+    /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].macfilter="$mf"
+    local mac=""
+    for var in `echo "$ml" | sed 's/|/ /g'`;do 
+        len=$(echo -n "$var" | wc -c)
+        if [ "12" == "$len" ] ;then
+            mac="${var:0:2}:${var:2:2}:${var:4:2}:${var:6:2}:${var:8:2}:${var:10:2}" 
+            /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} add_list wireless.@wifi-iface[${i}].maclist="$mac"
+        fi
+    done 
+fi
+/sbin/uci -q commit wireless
+echo 1 > /tmp/freecwmp_wireless_need_restart.tmp
+}
+
+
+get_device_info_wireless_protalenable(){
+local val=$(get_wifi_iface "2.4G" "1" "portal")
+if [ "$val" = "1" ]; then
+  val="1"
+else
+  val="0"
+fi
+freecwmp_output "InternetGatewayDevice.DeviceInfo.wireless_protalenable" "$val" 
+}
+
+get_device_info_wireless_protalenable2(){
+local val=$(get_wifi_iface "2.4G" "2" "portal")
+if [ "$val" = "1" ]; then
+  val="1"
+else
+  val="0"
+fi
+freecwmp_output "InternetGatewayDevice.DeviceInfo.wireless_protalenable2" "$val" 
+}
+
+
+set_device_info_wireless_protalenable(){
+local val="$1"
+if [ "$val" = "1" ]; then
+  val="1"
+else
+  val="0"
+fi
+set_wifi_iface "2.4G" "1" "portal" "$val" && /sbin/enable_portal &>/dev/null
+}
+
+set_device_info_wireless_enable2(){
+local val="$1"
+if [ "$val" == "0" ] ;then
+  val="1"
+  set_wifi_iface "2.4G" "2" "disabled" "$val" 
+else 
+  val="0"
+  set_wifi_iface "2.4G" "2" "disabled" "$val" 
+fi
+echo 1 > /tmp/freecwmp_wireless_need_restart.tmp
+}
+
+set_device_info_wireless_protalenable2(){
+local val="$1"
+if [ "$val" = "1" ]; then
+  val="1"
+else
+  val="0"
+fi
+set_wifi_iface "2.4G" "2" "portal" "$val" && /sbin/enable_portal &>/dev/null
+}
+
+set_device_info_wireless_key() {
+local i=$(get_wifi_iface_index "2.4G" "1")
+[ "$i" == "N/A" ] && return 1 
+if [ "$1" == "N/A" ]; then
+      /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].encryption=none
+      /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} delete wireless.@wifi-iface[${i}].key
+else
+      /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].encryption=psk2
+      /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].key=$1
+fi
+uci commit wireless
+echo 1 > /tmp/freecwmp_wireless_need_restart.tmp
+}
+
+set_device_info_wireless_key_5G() {
+local i=$(get_wifi_iface_index "5.8G" "1")
+[ "$i" == "N/A" ] && return 1 
+if [ "$1" == "N/A" ]; then
+      /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].encryption=none
+      /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} delete wireless.@wifi-iface[${i}].key
+else
+      /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].encryption=psk2
+      /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].key=$1
+fi
+uci commit wireless
+echo 1 > /tmp/freecwmp_wireless_need_restart.tmp
+}
+
+set_device_info_wireless_key2() {  
+local i=$(get_wifi_iface_index "2.4G" "2")
+[ "$i" == "N/A" ] && return 1 
+if [ "$1" == "N/A" ]; then
+      /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].encryption=none
+      /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} delete wireless.@wifi-iface[${i}].key
+else
+      /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].encryption=psk2
+      /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].key=$1
+fi
+uci commit wireless
+echo 1 > /tmp/freecwmp_wireless_need_restart.tmp                                                                       
+} 
+
+set_device_info_wireless_key3() {  
+local i=$(get_wifi_iface_index "2.4G" "3")
+[ "$i" == "N/A" ] && return 1 
+if [ "$1" == "N/A" ]; then
+      /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].encryption=none
+      /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} delete wireless.@wifi-iface[${i}].key
+else
+      /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].encryption=psk2
+      /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].key=$1
+fi
+uci commit wireless
+echo 1 > /tmp/freecwmp_wireless_need_restart.tmp                                                                       
+} 
+
+set_device_info_wireless_key4() {  
+local i=$(get_wifi_iface_index "2.4G" "4")
+[ "$i" == "N/A" ] && return 1 
+if [ "$1" == "N/A" ]; then
+      /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].encryption=none
+      /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} delete wireless.@wifi-iface[${i}].key
+else
+      /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].encryption=psk2
+      /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].key=$1
+fi
+uci commit wireless
+echo 1 > /tmp/freecwmp_wireless_need_restart.tmp                                                                       
+} 
+
+set_dpinevice_info_wireless_key2_5G() {  
+local i=$(get_wifi_iface_index "5.8G" "2")
+[ "$i" == "N/A" ] && return 1 
+if [ "$1" == "N/A" ]; then
+      /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].encryption=none
+      /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} delete wireless.@wifi-iface[${i}].key
+else
+      /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].encryption=psk2
+      /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].key=$1
+fi
+uci commit wireless
+echo 1 > /tmp/freecwmp_wireless_need_restart.tmp                                                                       
+}
+
+set_device_info_wireless_ssid() {
+local i=$(get_wifi_iface_index "2.4G" "1")
+[ "$i" == "N/A" -o "$1" == "N/A" ] && return 1 
+/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].ssid="$1"
+uci commit wireless
+echo 1 > /tmp/freecwmp_wireless_need_restart.tmp
+}
+
+set_device_info_wireless_ssid_5G() {
+local i=$(get_wifi_iface_index "5.8G" "1")
+[ "$i" == "N/A" -o "$1" == "N/A" ] && return 1 
+/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].ssid="$1"
+uci commit wireless
+echo 1 > /tmp/freecwmp_wireless_need_restart.tmp
+}
+
+set_device_info_wireless_ssid2() {  
+	
+local i=0
+local val=""
+local val2=""
+local second=0
+for i in 0 1 2 3 4 5
+do
+
+  val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wireless.@wifi-iface[${i}].device 2> /dev/null`
+  if [ -z "$val" ]; then           
+   break;                                                                        
+  fi
+
+  if [ "$val" == "wifi0" ]; then
+   if [ $second == 1 ]; then 
+    val2=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wireless.@wifi-iface[${i}].ssid 2> /dev/null`
+    break;
+   fi
+   second=1
+  fi 
+    	
+done	                                                                                               
+if [ -z "$val2" ]; then                                                                                                  
+if [ "$1" != "N/A" ]; then                                                                                                                                                                                     
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} add wireless wifi-iface                 
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].encryption=none
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} delete wireless.@wifi-iface[${i}].disabled                                
+fi                                                                                                                      
+fi                                                                                                                      
+if [ "$1" != "N/A" ]; then                                                                                              
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].device=wifi0                                 
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].mode=ap                                     
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].ssid=$1                                     
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].network=lan  
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} delete wireless.@wifi-iface[${i}].disabled                            
+else                                                                                                                    
+# /sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} delete wireless.@wifi-iface[${i}]     
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].disabled=1                                    
+fi                                                                                                                     
+uci commit   wireless                                                                                                          
+                                                                                                                        
+ echo 1 > /tmp/freecwmp_wireless_need_restart.tmp                                                                       
+} 
+
+set_device_info_wireless_ssid3() {  
+	
+local i=0
+local val=""
+local val2=""
+local second=0
+for i in 0 1 2 3 4 5
+do
+
+  val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wireless.@wifi-iface[${i}].device 2> /dev/null`
+  if [ -z "$val" ]; then           
+   break;                                                                        
+  fi
+
+  if [ "$val" == "wifi0" ]; then
+   if [ $second == 2 ]; then 
+    val2=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wireless.@wifi-iface[${i}].ssid 2> /dev/null`
+    break;
+   fi
+   let second+=1
+  fi 
+    	
+done	                                                                                               
+if [ -z "$val2" ]; then                                                                                                  
+if [ "$1" != "N/A" ]; then                                                                                                                                                                                     
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} add wireless wifi-iface                 
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].encryption=none   
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} delete wireless.@wifi-iface[${i}].disabled                             
+fi                                                                                                                      
+fi                                                                                                                      
+if [ "$1" != "N/A" ]; then                                                                                              
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].device=wifi0                                 
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].mode=ap                                     
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].ssid=$1                                     
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].network=lan  
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} delete wireless.@wifi-iface[${i}].disabled                                
+else                                                                                                                    
+# /sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} delete wireless.@wifi-iface[${i}]     
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].disabled=1                                    
+ fi                                                                                                                     
+ uci commit                                                                                                             
+                                                                                                                        
+ echo 1 > /tmp/freecwmp_wireless_need_restart.tmp                                                                       
+} 
+set_device_info_wireless_ssid4() {  
+	
+local i=0
+local val=""
+local val2=""
+local second=0
+for i in 0 1 2 3 4 5
+do
+
+  val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wireless.@wifi-iface[${i}].device 2> /dev/null`
+  if [ -z "$val" ]; then           
+   break;                                                                        
+  fi
+
+  if [ "$val" == "wifi0" ]; then
+   if [ $second == 3 ]; then 
+    val2=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wireless.@wifi-iface[${i}].ssid 2> /dev/null`
+    break;
+   fi
+   let second+=1
+  fi 
+    	
+done	                                                                                               
+if [ -z "$val2" ]; then                                                                                                  
+if [ "$1" != "N/A" ]; then                                                                                                                                                                                     
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} add wireless wifi-iface                 
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].encryption=none  
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} delete wireless.@wifi-iface[${i}].disabled                              
+fi                                                                                                                      
+fi                                                                                                                      
+if [ "$1" != "N/A" ]; then                                                                                              
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].device=wifi0                                  
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].mode=ap                                     
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].ssid=$1                                     
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].network=lan  
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} delete wireless.@wifi-iface[${i}].disabled                               
+else                                                                                                                    
+# /sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} delete wireless.@wifi-iface[${i}]   
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].disabled=1                                      
+ fi                                                                                                                     
+ uci commit  wireless                                                                                                           
+                                                                                                                        
+ echo 1 > /tmp/freecwmp_wireless_need_restart.tmp                                                                       
+} 
+
+set_device_info_wireless_ssid2_5G() {  
+	
+local i=0
+local val=""
+local val2=""
+local second=0
+for i in 0 1 2 3 4 5
+do
+
+  val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wireless.@wifi-iface[${i}].device 2> /dev/null`
+  if [ -z "$val" ]; then           
+   break;                                                                        
+  fi
+
+  if [ "$val" == "wifi0" ]; then
+   if [ $second == 1 ]; then 
+    val2=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wireless.@wifi-iface[${i}].ssid 2> /dev/null`
+    break;
+   fi
+   second=1
+  fi 
+    	
+done		                                                                                                   
+if [ -z "$val2" ]; then                                                                                                  
+if [ "$1" != "N/A" ]; then                                                                                                                                                                                     
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} add wireless wifi-iface
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].encryption=none                                                 
+fi                                                                                                                      
+fi                                                                                                                      
+if [ "$1" != "N/A" ]; then                                                                                              
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].device=wifi0                                  
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].mode=ap                                     
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].ssid=$1                                     
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[${i}].network=lan                                 
+else                                                                                                                    
+ /sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} delete wireless.@wifi-iface[${i}]                                         
+fi                                                                                                                     
+uci commit                                                                                                             
+                                                                                                                        
+echo 1 > /tmp/freecwmp_wireless_need_restart.tmp                                                                       
+} 
+ 
+get_device_info_ip_address() {
+local val
+if [ -z "$default_wan_device_mng_interface_ip" ]; then
+        network_get_ipaddr val lan
+else
+        val=$default_wan_device_mng_interface_ip
+fi
+if [ -z "$val" ]; then 
+val=`ifconfig br-lan|grep inet|cut -d ':' -f2|cut -d ' ' -f1 2>/dev/null`
+fi
+freecwmp_output "InternetGatewayDevice.DeviceInfo.ip_address" "$val"
+}
+
+set_device_info_ip_address() {
+freecwmp_output "InternetGatewayDevice.DeviceInfo.ip_address" "not supported"
+}	
+
+get_device_info_MaxStaNum() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wireless.wifi0.MaxStaNum 2> /dev/null`
+if [ -z "$val" ]; then           
+   val="64"                                                                        
+fi 
+freecwmp_output "InternetGatewayDevice.DeviceInfo.MaxStaNum" "$val"	
+}
+
+set_device_info_MaxStaNum() {
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.wifi0.MaxStaNum=$1
+uci commit 
+#iwpriv wifi0 setMaxStaNum=$1
+}	
+
+get_device_info_KickStaRssiLow() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wireless.wifi0.KickStaRssiLow 2> /dev/null`
+if [ -z "$val" ]; then           
+   val="-100"                                                                        
+fi 
+freecwmp_output "InternetGatewayDevice.DeviceInfo.KickStaRssiLow" "$val"
+}
+
+get_device_info_KickStaRssiLow_5G() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wireless.wifi0.KickStaRssiLow 2> /dev/null`
+if [ -z "$val" ]; then           
+   val="-100"                                                                        
+fi 
+freecwmp_output "InternetGatewayDevice.DeviceInfo.KickStaRssiLow_5G" "$val"
+}
+
+set_device_info_KickStaRssiLow() {
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.wifi0.KickStaRssiLow=$1
+uci commit 
+#iwpriv wifi0 set KickStaRssiLow=-$1
+}
+
+set_device_info_KickStaRssiLow_5G() {
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.wifi0.KickStaRssiLow=$1
+uci commit 
+}
+
+get_device_info_AuthRssiThres() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wireless.wifi0.AuthRssiThres 2> /dev/null`
+if [ -z "$val" ]; then           
+   val="-100"                                                                        
+fi 
+freecwmp_output "InternetGatewayDevice.DeviceInfo.AuthRssiThres" "$val"
+}
+
+set_device_info_AuthRssiThres() {
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.wifi0.AuthRssiThres=$1
+uci commit 
+#iwpriv wifi0 set AuthRssiThres=-$1
+}
+
+get_device_info_AssocReqRssiThres() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wireless.wifi0.AssocReqRssiThres 2> /dev/null`
+if [ -z "$val" ]; then           
+   val="-100"                                                                        
+fi 
+freecwmp_output "InternetGatewayDevice.DeviceInfo.AssocReqRssiThres" "$val"
+}
+
+set_device_info_AssocReqRssiThres() {
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.wifi0.AssocReqRssiThres=$1
+uci commit 
+#iwpriv wifi0 set AssocReqRssiThres=-$1
+}
+
+get_device_info_wireless_hide_essid() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wireless.@wifi-iface[0].hidden 2> /dev/null`
+if [ "$val" != "1" ]; then
+	val="0"
+fi
+freecwmp_output "InternetGatewayDevice.DeviceInfo.wireless_hide_essid" "$val"
+}
+
+set_device_info_wireless_hide_essid() {
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[0].hidden="$1"
+echo 1 > /tmp/freecwmp_wireless_need_restart.tmp
+}
+
+get_device_info_wireless_channel() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wireless.wifi0.channel 2> /dev/null`
+freecwmp_output "InternetGatewayDevice.DeviceInfo.wireless_channel" "$val"
+}
+
+get_device_info_wireless_channel_5G() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wireless.wifi1.channel 2> /dev/null`
+freecwmp_output "InternetGatewayDevice.DeviceInfo.wireless_channel_5G" "$val"
+}
+
+set_device_info_wireless_channel() {
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.wifi0.channel="$1"
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit wireless.wifi0.channel
+echo 1 > /tmp/freecwmp_wireless_need_restart.tmp
+}
+
+set_device_info_wireless_channel_5G() {
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.wifi1.channel="$1"
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit wireless.wifi1.channel
+echo 1 > /tmp/freecwmp_wireless_need_restart.tmp
+}
+
+get_device_info_wireless_tx_power() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wireless.wifi0.txpower 2> /dev/null`
+freecwmp_output "InternetGatewayDevice.DeviceInfo.wireless_tx_power" "$val"
+}
+
+get_device_info_wireless_tx_power_5G() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wireless.wifi1.txpower 2> /dev/null`
+freecwmp_output "InternetGatewayDevice.DeviceInfo.wireless_tx_power_5G" "$val"
+}
+
+set_device_info_wireless_tx_power() {
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.wifi0.txpower="$1"
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit wireless.wifi0.txpower
+echo 1 > /tmp/freecwmp_wireless_need_restart.tmp
+}
+
+set_device_info_wireless_tx_power_5G() {
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.wifi1.txpower="$1"
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit wireless.wifi1.txpower
+echo 1 > /tmp/freecwmp_wireless_need_restart.tmp
+}
+get_device_info_wireless_hw_mode() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wireless.wifi0.hwmode 2> /dev/null`
+freecwmp_output "InternetGatewayDevice.DeviceInfo.wireless_hw_mode" "$val"
+}
+
+set_device_info_wireless_hw_mode() {
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.wifi0.hwmode="$1"
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit wireless.wifi0.hwmode
+echo 1 > /tmp/freecwmp_wireless_need_restart.tmp
+}
+
+get_device_info_wireless_hw_mode_5G() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wireless.wifi1.hwmode 2> /dev/null`
+freecwmp_output "InternetGatewayDevice.DeviceInfo.wireless_hw_mode_5G" "$val"
+}
+
+set_device_info_wireless_hw_mode_5G() {
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.wifi1.hwmode="$1"
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit wireless.wifi1.hwmode
+echo 1 > /tmp/freecwmp_wireless_need_restart.tmp
+}
+
+get_device_info_wireless_ht_mode() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wireless.wifi0.htmode 2> /dev/null`
+freecwmp_output "InternetGatewayDevice.DeviceInfo.wireless_ht_mode" "$val"
+}
+
+get_device_info_wireless_ht() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wireless.wifi0.ht 2> /dev/null`
+freecwmp_output "InternetGatewayDevice.DeviceInfo.wireless_ht" "$val"
+}
+
+set_device_info_wireless_ht_mode() {
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.wifi0.htmode="$1"
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit wireless.wifi0.htmode
+echo 1 > /tmp/freecwmp_wireless_need_restart.tmp
+}
+
+set_device_info_wireless_ht() {
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.wifi0.ht="$1"
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit wireless.wifi0.ht
+echo 1 > /tmp/freecwmp_wireless_need_restart.tmp
+}
+
+get_device_info_wireless_encryption() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wireless.@wifi-iface[0].encryption 2> /dev/null`
+freecwmp_output "InternetGatewayDevice.DeviceInfo.wireless_encryption" "$val"
+}
+
+set_device_info_wireless_encryption() {
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[0].encryption="$1"
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit wireless.@wifi-iface[0].encryption
+echo 1 > /tmp/freecwmp_wireless_need_restart.tmp
+}
+
+get_device_info_wireless_station_number_max() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get wireless.@wifi-iface[0].max_num_sta 2> /dev/null`
+freecwmp_output "InternetGatewayDevice.DeviceInfo.wireless_station_number_max" "$val"
+}
+
+set_device_info_wireless_station_number_max() {
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set wireless.@wifi-iface[0].max_num_sta="$1"
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit wireless.@wifi-iface[0].max_num_sta
+echo 1 > /tmp/freecwmp_wireless_need_restart.tmp
+}
+
+get_device_info_probe_server() {
+local enb=`/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get probe.report.enable`
+local port=`/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get probe.report.port`
+local host=`/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get probe.report.hostname`
+local inter=`/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get probe.report.interval`
+local thre=`/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get probe.report.threshold`
+local val={\'enable\':\'$enb\',\'port\':\'$port\',\'hostname\':\'$host\',\'interval\':\'$inter\',\'threshold\':\'$thre\'}
+freecwmp_output "InternetGatewayDevice.DeviceInfo.probe_server" "$val"
+}
+
+set_device_info_probe_server() {
+local enb=$(parse_json $1 "enable")
+local port=$(parse_json $1 "port")
+local host=$(parse_json $1 "hostname")
+local inter=$(parse_json $1 "interval")
+local thre=$(parse_json $1 "threshold")
+if [ "$enb" != "" -a "$enb" != "NULL" -a "$enb" != "N/A" ]; then
+    /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set probe.report.enable="$enb"
+fi
+if [ "$port" != "" -a "$port" != "NULL" -a "$port" != "N/A" ]; then
+    /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set probe.report.port="$port"
+fi
+if [ "$host" != "" -a "$host" != "NULL" -a "$host" != "N/A" ]; then
+    /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set probe.report.hostname="$host"
+fi
+if [ "$inter" != "" -a "$inter" != "NULL" -a "$inter" != "N/A" ]; then
+    /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set probe.report.interval="$inter"
+fi
+if [ "$thre" != "" -a "$thre" != "NULL" -a "$thre" != "N/A" ]; then
+    /sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set probe.report.threshold="$thre"
+fi
+/sbin/uci -q commit probe
+test -f /etc/init.d/clientprobe && /etc/init.d/clientprobe restart &
+}
+
+get_device_info_region() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get device_custom.@type_in[0].region 2> /dev/null`
+freecwmp_output "InternetGatewayDevice.DeviceInfo.region" "$val"
+}
+
+set_device_info_region() {
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set device_custom.@type_in[0].region="$1"
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit device_custom.@type_in[0].region
+}
+
+get_device_info_province() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get device_custom.@type_in[0].province 2> /dev/null`
+freecwmp_output "InternetGatewayDevice.DeviceInfo.province" "$val"
+}
+
+set_device_info_province() {
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set device_custom.@type_in[0].province="$1"
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit device_custom.@type_in[0].province
+}
+
+get_device_info_city() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get device_custom.@type_in[0].city 2> /dev/null`
+freecwmp_output "InternetGatewayDevice.DeviceInfo.city" "$val"
+}
+
+set_device_info_city() {
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set device_custom.@type_in[0].city="$1"
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit device_custom.@type_in[0].city
+}
+
+get_device_info_district() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get device_custom.@type_in[0].district 2> /dev/null`
+freecwmp_output "InternetGatewayDevice.DeviceInfo.district" "$val"
+}
+
+set_device_info_district() {
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set device_custom.@type_in[0].district="$1"
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit device_custom.@type_in[0].district
+}
+
+get_device_info_road() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get device_custom.@type_in[0].road 2> /dev/null`
+freecwmp_output "InternetGatewayDevice.DeviceInfo.road" "$val"
+}
+
+set_device_info_road() {
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set device_custom.@type_in[0].road="$1"
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit device_custom.@type_in[0].road
+}
+
+get_device_info_address() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get device_custom.@type_in[0].address 2> /dev/null`
+freecwmp_output "InternetGatewayDevice.DeviceInfo.address" "$val"
+}
+
+set_device_info_address() {
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set device_custom.@type_in[0].address="$1"
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit device_custom.@type_in[0].address
+}
+
+get_device_info_zip_code() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get device_custom.@type_in[0].zip_code 2> /dev/null`
+freecwmp_output "InternetGatewayDevice.DeviceInfo.zip_code" "$val"
+}
+
+set_device_info_zip_code() {
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set device_custom.@type_in[0].zip_code="$1"
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit device_custom.@type_in[0].zip_code
+}
+
+get_device_info_hotel_name() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get device_custom.@type_in[0].hotel_name 2> /dev/null`
+freecwmp_output "InternetGatewayDevice.DeviceInfo.hotel_name" "$val"
+}
+
+set_device_info_hotel_name() {
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set device_custom.@type_in[0].hotel_name="$1"
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit device_custom.@type_in[0].hotel_name
+}
+
+get_device_info_shop_name() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get device_custom.@type_in[0].shop_name 2> /dev/null`
+freecwmp_output "InternetGatewayDevice.DeviceInfo.shop_name" "$val"
+}
+
+set_device_info_shop_name() {
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set device_custom.@type_in[0].shop_name="$1"
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit device_custom.@type_in[0].shop_name
+}
+
+get_device_info_room_number() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get device_custom.@type_in[0].room_number 2> /dev/null`
+freecwmp_output "InternetGatewayDevice.DeviceInfo.room_number" "$val"
+}
+
+set_device_info_room_number() {
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set device_custom.@type_in[0].room_number="$1"
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit device_custom.@type_in[0].room_number
+}
+
+get_device_info_group_number() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get device_custom.@type_in[0].group_number 2> /dev/null`
+freecwmp_output "InternetGatewayDevice.DeviceInfo.group_number" "$val"
+}
+
+set_device_info_group_number() {
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set device_custom.@type_in[0].group_number="$1"
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit device_custom.@type_in[0].group_number
+}
+
+get_device_info_notes() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get device_custom.@type_in[0].notes 2> /dev/null`
+freecwmp_output "InternetGatewayDevice.DeviceInfo.notes" "$val"
+}
+
+set_device_info_notes() {
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set device_custom.@type_in[0].notes="$1"
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit device_custom.@type_in[0].notes
+}
+
+get_device_info_remark_a() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get device_custom.@type_in[0].remark_a 2> /dev/null`
+freecwmp_output "InternetGatewayDevice.DeviceInfo.remark_a" "$val"
+}
+
+set_device_info_remark_a() {
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set device_custom.@type_in[0].remark_a="$1"
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit device_custom.@type_in[0].remark_a
+}
+
+get_device_info_remark_b() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get device_custom.@type_in[0].remark_b 2> /dev/null`
+freecwmp_output "InternetGatewayDevice.DeviceInfo.remark_b" "$val"
+}
+
+set_device_info_remark_b() {
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set device_custom.@type_in[0].remark_b="$1"
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit device_custom.@type_in[0].remark_b
+}
+
+get_device_info_remark_c() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get device_custom.@type_in[0].remark_c 2> /dev/null`
+freecwmp_output "InternetGatewayDevice.DeviceInfo.remark_c" "$val"
+}
+
+set_device_info_remark_c() {
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set device_custom.@type_in[0].remark_c="$1"
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit device_custom.@type_in[0].remark_c
+}
+
+get_device_info_remark_d() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get device_custom.@type_in[0].remark_d 2> /dev/null`
+freecwmp_output "InternetGatewayDevice.DeviceInfo.remark_d" "$val"
+}
+
+set_device_info_remark_d() {
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set device_custom.@type_in[0].remark_d="$1"
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit device_custom.@type_in[0].remark_d
+}
+
+get_device_info_remark_e() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get device_custom.@type_in[0].remark_e 2> /dev/null`
+freecwmp_output "InternetGatewayDevice.DeviceInfo.remark_e" "$val"
+}
+
+set_device_info_remark_e() {
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set device_custom.@type_in[0].remark_e="$1"
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit device_custom.@type_in[0].remark_e
+}
+
+get_device_info_remark_f() {
+local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get device_custom.@type_in[0].remark_f 2> /dev/null`
+freecwmp_output "InternetGatewayDevice.DeviceInfo.remark_f" "$val"
+}
+
+set_device_info_remark_f() {
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set device_custom.@type_in[0].remark_f="$1"
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit device_custom.@type_in[0].remark_f
+}
+
+get_device_info_hardware_version() {
+local val=`cat /etc/sysinfo.conf | grep hw_version | cut -d '=' -f2 2> /dev/null`
+local val2=`dmesg | grep AR9280 2> /dev/null`
+if [ -d "/sys/class/ieee80211/phy0" ]; then                                       
+  if [ "$val2" == "" ]; then                                          
+      val=${val}"-M"                                                                            
+    else                   
+      val=${val}"-A"                                                                   
+  fi                                                                    
+fi   
+  if [ -e /dev/ttyUSB0 ]; then 
+     val=${val}"-LTE" 
+  fi                                                                                      
+  
+freecwmp_output "InternetGatewayDevice.DeviceInfo.HardwareVersion" "$val"    
+}
+
+get_device_info_software_version() {
+#local val=`/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} get freecwmp.@device[0].software_version 2> /dev/null`
+local val=`cat /etc/sysinfo.conf | grep soft_version | cut -d '=' -f2 2> /dev/null`
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} set freecwmp.@device[0].software_version=$val 2> /dev/null
+/sbin/uci ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} -q commit freecwmp.@device[0].software_version
+
+freecwmp_output "InternetGatewayDevice.DeviceInfo.SoftwareVersion" "$val"
+}
+
+get_device_info_config_version() {
+local val=`cat /etc/xunjiu/xj_cfg_version 2> /dev/null`
+freecwmp_output "InternetGatewayDevice.DeviceInfo.config_version" "$val"
+}
+
+set_device_info_config_version() {
+echo "$1" > /etc/xunjiu/xj_cfg_version 2> /dev/null
+}
+
+
+get_device_info_add_station_mac() {
+freecwmp_output "InternetGatewayDevice.DeviceInfo.add_station_mac" "not supported"
+}
+
+set_device_info_add_station_mac() {
+webauth -a "$1" 2> /dev/null
+local val=`echo \"$1\" 2> /dev/null`                                                                   
+echo "#!/bin/sh">/tmp/addmac                                             
+echo "ubus call wifidog notify '{ \"parameter\": \"addmac\", \"value\": "$val" }'">>/tmp/addmac
+/bin/chmod 777 /tmp/addmac
+/tmp/addmac
+}
+
+get_device_info_remove_station_mac() {
+freecwmp_output "InternetGatewayDevice.DeviceInfo.remove_station_mac" "not supported"
+}
+
+set_device_info_remove_station_mac() {
+webauth -d "$1" 2> /dev/null
+local val=`echo \"$1\" 2> /dev/null`                                                                   
+echo "#!/bin/sh">/tmp/delmac                                             
+echo "ubus call wifidog notify '{ \"parameter\": \"delmac\", \"value\": "$val" }'">>/tmp/delmac
+/bin/chmod 777 /tmp/delmac
+/tmp/delmac
+}
+
+get_device_info_uptime() {
+local val=`cat /proc/uptime | awk -F "." '{ print $1 }'`
+freecwmp_output "InternetGatewayDevice.DeviceInfo.UpTime" "$val"
+}
+
+get_device_info_device_log() {
+local val=""
+if [ ${FLAGS_last} -eq ${FLAGS_TRUE} ]; then
+	val=`dmesg | tail -n1`
+else
+	val=`dmesg | tail -n10`
+fi
+freecwmp_output "InternetGatewayDevice.DeviceInfo.DeviceLog" "$val"
+}
+
+get_device_info_multi() {
+local i=""
+local c=""
+echo -n > /tmp/freecwmp_parameter_get_value_response.tmp
+for i in `cat /tmp/freecwmp_parameter_get_value.tmp`
+do
+	cat /usr/share/freecwmp/separate >> /tmp/freecwmp_parameter_get_value_response.tmp
+	echo $i >> /tmp/freecwmp_parameter_get_value_response.tmp
+	cat /usr/share/freecwmp/separate_value >> /tmp/freecwmp_parameter_get_value_response.tmp
+	c=$(get_device_info "$i")
+	echo $c >> /tmp/freecwmp_parameter_get_value_response.tmp
+done
+rm /tmp/freecwmp_parameter_get_value.tmp
+}
+
+get_device_info() {
+case "$1" in
+	parameter_name_multi)
+	get_device_info_multi
+	;;
+	InternetGatewayDevice.)
+	get_device_info_manufacturer
+	get_device_info_oui
+	get_device_info_product_class
+	get_device_info_product_model
+	get_device_info_flash_size
+	get_device_info_svn_version
+	get_device_info_serial_number
+	get_device_info_hardware_version
+	get_device_info_software_version
+	get_device_info_config_version
+	get_device_info_add_station_mac
+	get_device_info_remove_station_mac
+	get_device_info_uptime
+	get_device_info_user_name
+	get_device_info_ip_outside
+	get_device_info_port_outside
+	get_device_info_portal_url
+	get_device_info_wifidog_portal
+	get_device_info_wan_type
+	get_device_info_wireless_threshold
+	get_device_info_wireless_threshold_5G
+	get_device_info_wifidog_enable
+	get_device_info_lbd_enable
+	get_device_info_urlfilter_type
+	get_device_info_urlfilter_list
+	get_device_info_white_mac
+	get_device_info_black_mac
+	get_device_info_white_list1
+	get_device_info_white_list2
+	get_device_info_white_list3
+	get_device_info_weixing_pass
+	get_device_info_weixing_pass_interval
+	get_device_info_lan_auth
+	get_device_info_free_no_auth
+	get_device_info_debug_result
+	get_device_info_board_name
+	get_device_info_root_password
+	get_device_info_snmp_v3_password
+	get_device_info_work_mode
+	get_device_info_qos
+	get_device_info_qos_download
+	get_device_info_qos_upload
+	get_device_info_wan_current_ip_addr
+	get_device_info_wan_static_ip
+	get_device_info_wan_network_protocol
+	get_device_info_wan_network_mask
+	get_device_info_wan_network_gateway
+	get_device_info_memory_utilization
+	get_device_info_flash_utilization
+	get_device_info_cpu_utilization
+	get_device_info_client_speed
+	get_device_info_ping_test_result
+	get_device_info_ping_test_address
+	get_device_info_ap_mode_manage_addr_switch
+	get_device_info_pkg_sendaddr
+	get_device_info_pkg_sendport
+	get_device_info_pkg_enable
+	get_device_info_ap_mode_manage_ip
+#	get_device_info_client_traffic
+	get_device_info_led_mode
+	get_device_info_wshaper_switch
+	get_device_info_wshaper_uplink
+	get_device_info_wshaper_downlink
+	get_device_info_HT40_noscan
+	get_device_info_language
+	get_device_info_wireless_disable
+	get_device_info_wireless_restart
+	get_device_info_wireless_ssid
+	get_device_info_wireless_ssid2
+	get_device_info_wireless_ssid3
+	get_device_info_wireless_ssid4
+	get_device_info_wireless_ssid_5G
+	get_device_info_wireless_ssid2_5G
+	get_device_info_wireless_create
+	get_device_info_wireless_value_5G
+	get_device_info_wireless_value
+        get_device_info_wireless_enable
+        get_device_info_wireless_enable2
+	get_device_info_wireless_protalenable
+	get_device_info_wireless_protalenable2
+	get_device_info_wireless_key
+	get_device_info_wireless_key2
+	get_device_info_wireless_key3
+	get_device_info_wireless_key4
+	get_device_info_wireless_key_5G
+	get_device_info_wireless_key2_5G	
+	get_device_info_ip_address
+	get_device_info_KickStaRssiLow
+	get_device_info_KickStaRssiLow_5G
+	get_device_info_AuthRssiThres
+	get_device_info_MaxStaNum
+	get_device_info_AssocReqRssiThres
+	get_device_info_wireless_hide_essid
+	get_device_info_wireless_channel
+	get_device_info_wireless_channel_5G
+	get_device_info_wireless_tx_power
+	get_device_info_wireless_tx_power_5G
+	get_device_info_wireless_hw_mode
+	get_device_info_wireless_hw_mode_5G
+	get_device_info_wireless_ht_mode
+	get_device_info_wireless_ht
+	get_device_info_wireless_encryption
+	get_device_info_wireless_station_number_max
+	get_device_info_download_speed
+	get_device_info_softprobe_result
+	get_device_info_pagespeed_result
+	get_device_info_traceroute_result
+	get_device_info_netstat_result
+	get_device_info_nslookup_result
+	get_device_info_register_url
+	get_device_info_freecwmp_ipport
+	get_device_info_region
+	get_device_info_probe_server
+	get_device_info_province
+	get_device_info_city
+	get_device_info_district
+	get_device_info_road
+	get_device_info_address
+	get_device_info_zip_code
+	get_device_info_hotel_name
+	get_device_info_shop_name
+	get_device_info_room_number
+	get_device_info_group_number
+	get_device_info_notes
+	get_device_info_remark_a
+	get_device_info_remark_b
+	get_device_info_remark_c
+	get_device_info_remark_d
+	get_device_info_remark_e
+	get_device_info_remark_f
+	get_device_info_device_log
+	;;
+	InternetGatewayDevice.DeviceInfo.)
+	get_device_info_manufacturer
+	get_device_info_oui
+	get_device_info_product_class
+	get_device_info_product_model
+	get_device_info_flash_size
+	get_device_info_svn_version
+	get_device_info_serial_number
+	get_device_info_hardware_version
+	get_device_info_software_version
+	get_device_info_config_version
+	get_device_info_add_station_mac
+	get_device_info_remove_station_mac
+	get_device_info_uptime
+	get_device_info_user_name
+	get_device_info_ip_outside
+	get_device_info_port_outside
+	get_device_info_portal_url
+	get_device_info_wifidog_portal
+	get_device_info_wan_type
+	get_device_info_wireless_threshold
+	get_device_info_wireless_threshold_5G
+	get_device_info_wifidog_enable
+	get_device_info_lbd_enable
+	get_device_info_urlfilter_type
+	get_device_info_urlfilter_list
+	get_device_info_white_mac
+	get_device_info_black_mac
+	get_device_info_white_list1
+	get_device_info_white_list2
+	get_device_info_white_list3
+	get_device_info_weixing_pass
+	get_device_info_weixing_pass_interval
+	get_device_info_lan_auth
+	get_device_info_free_no_auth
+	get_device_info_debug_result
+	get_device_info_board_name
+	get_device_info_root_password
+	get_device_info_snmp_v3_password
+	get_device_info_work_mode
+	get_device_info_qos
+	get_device_info_qos_download
+	get_device_info_qos_upload	
+	get_device_info_wan_current_ip_addr
+	get_device_info_wan_static_ip
+	get_device_info_wan_network_protocol
+	get_device_info_wan_network_mask
+	get_device_info_wan_network_gateway
+	get_device_info_memory_utilization
+	get_device_info_flash_utilization
+	get_device_info_client_speed
+	get_device_info_port_state
+	get_device_info_cpu_utilization
+	get_device_info_ping_test_result
+	get_device_info_ping_test_address
+	get_device_info_ap_mode_manage_addr_switch
+	get_device_info_pkg_sendaddr
+	get_device_info_pkg_sendport
+	get_device_info_pkg_enable
+	get_device_info_ap_mode_manage_ip
+#	get_device_info_client_traffic
+	get_device_info_led_mode
+	get_device_info_wshaper_switch
+	get_device_info_wshaper_uplink
+	get_device_info_wshaper_downlink
+	get_device_info_HT40_noscan
+	get_device_info_language
+	get_device_info_wireless_disable
+	get_device_info_wireless_restart
+	get_device_info_wireless_create
+	get_device_info_wireless_value_5G
+	get_device_info_wireless_value
+        get_device_info_wireless_enable
+        get_device_info_wireless_enable2
+	get_device_info_wireless_protalenable
+	get_device_info_wireless_protalenable2
+	get_device_info_wireless_ssid
+	get_device_info_wireless_ssid2
+	get_device_info_wireless_ssid3
+	get_device_info_wireless_ssid4
+	get_device_info_wireless_ssid_5G
+	get_device_info_wireless_ssid2_5G	
+	get_device_info_wireless_key
+	get_device_info_wireless_key2
+	get_device_info_wireless_key3
+	get_device_info_wireless_key4
+	get_device_info_wireless_key_5G
+	get_device_info_wireless_key2_5G
+	get_device_info_download_speed
+	get_device_info_softprobe_result
+	get_device_info_pagespeed_result
+	get_device_info_traceroute_result
+	get_device_info_netstat_result
+	get_device_info_nslookup_result
+	get_device_info_register_url
+	get_device_info_freecwmp_ipport
+	get_device_info_ip_address
+	get_device_info_KickStaRssiLow
+	get_device_info_KickStaRssiLow_5G
+	get_device_info_MaxStaNum
+	get_device_info_AuthRssiThres
+	get_device_info_AssocReqRssiThres	
+	get_device_info_wireless_hide_essid
+	get_device_info_wireless_channel
+	get_device_info_wireless_channel_5G
+	get_device_info_wireless_tx_power
+	get_device_info_wireless_tx_power_5G
+	get_device_info_wireless_hw_mode
+	get_device_info_wireless_hw_mode_5G
+	get_device_info_wireless_ht_mode
+	get_device_info_wireless_ht
+	get_device_info_wireless_encryption
+	get_device_info_wireless_station_number_max
+	get_device_info_region
+	get_device_info_probe_server
+	get_device_info_province
+	get_device_info_city
+	get_device_info_district
+	get_device_info_road
+	get_device_info_address
+	get_device_info_zip_code
+	get_device_info_hotel_name
+	get_device_info_shop_name
+	get_device_info_room_number
+	get_device_info_group_number
+	get_device_info_notes
+	get_device_info_remark_a
+	get_device_info_remark_b
+	get_device_info_remark_c
+	get_device_info_remark_d
+	get_device_info_remark_e
+	get_device_info_remark_f
+	get_device_info_device_log
+	;;
+	InternetGatewayDevice.DeviceInfo.Manufacturer)
+	get_device_info_manufacturer
+	;;
+	InternetGatewayDevice.DeviceInfo.ManufacturerOUI)
+	get_device_info_oui
+	;;
+	InternetGatewayDevice.DeviceInfo.ProductClass)
+	get_device_info_product_class
+	;;
+	InternetGatewayDevice.DeviceInfo.ProductModel)
+	get_device_info_product_model
+	;;
+	InternetGatewayDevice.DeviceInfo.flash_size)
+	get_device_info_flash_size
+	;;
+	InternetGatewayDevice.DeviceInfo.svn_version)
+	get_device_info_svn_version
+	;;
+	InternetGatewayDevice.DeviceInfo.SerialNumber)
+	get_device_info_serial_number
+	;;
+	InternetGatewayDevice.DeviceInfo.user_name)
+	get_device_info_user_name
+	;;
+	InternetGatewayDevice.DeviceInfo.ip_outside)
+	get_device_info_ip_outside
+	;;
+	InternetGatewayDevice.DeviceInfo.port_outside)
+	get_device_info_port_outside
+	;;
+	InternetGatewayDevice.DeviceInfo.portal_url)
+	get_device_info_portal_url
+	;;
+	InternetGatewayDevice.DeviceInfo.white_list1)
+	get_device_info_white_list1
+	;;
+	InternetGatewayDevice.DeviceInfo.wifidog_enable)
+	get_device_info_wifidog_enable
+	;;
+	InternetGatewayDevice.DeviceInfo.wifidog_portal)
+	get_device_info_wifidog_portal
+	;;
+	InternetGatewayDevice.DeviceInfo.lbd_enable)
+	get_device_info_lbd_enable
+	;;
+	InternetGatewayDevice.DeviceInfo.aproam2gto5g_enable)
+	get_device_info_aproam2gto5g_enable
+	;;
+	InternetGatewayDevice.DeviceInfo.wan_type)
+	get_device_info_wan_type
+	;;
+	InternetGatewayDevice.DeviceInfo.wireless_threshold)
+	get_device_info_wireless_threshold
+	;;
+	InternetGatewayDevice.DeviceInfo.wireless_threshold_5G)
+	get_device_info_wireless_threshold_5G
+	;;
+	InternetGatewayDevice.DeviceInfo.urlfilter_type)
+	get_device_info_urlfilter_type
+	;;
+	InternetGatewayDevice.DeviceInfo.urlfilter_list)
+	get_device_info_urlfilter_list
+	;;
+	InternetGatewayDevice.DeviceInfo.white_mac)
+	get_device_info_white_mac
+	;;
+	InternetGatewayDevice.DeviceInfo.black_mac)
+	get_device_info_black_mac
+	;;
+	InternetGatewayDevice.DeviceInfo.ping_result)
+	get_device_info_ping_result
+	;;
+	InternetGatewayDevice.DeviceInfo.down_speed)
+	get_device_info_download_speed
+	;;
+	InternetGatewayDevice.DeviceInfo.softprobe_result)
+	get_device_info_softprobe_result
+	;;
+	InternetGatewayDevice.DeviceInfo.pagespeed_result)
+	get_device_info_pagespeed_result
+	;;
+	InternetGatewayDevice.DeviceInfo.traceroute_result)
+	get_device_info_traceroute_result
+	;;
+	InternetGatewayDevice.DeviceInfo.netstat)
+	get_device_info_netstat_result
+	;;
+	InternetGatewayDevice.DeviceInfo.nslookup)
+	get_device_info_nslookup_result
+	;;
+	InternetGatewayDevice.DeviceInfo.register_url)
+	get_device_info_register_url
+	;;
+	InternetGatewayDevice.DeviceInfo.freecwmp_ipport)
+	get_device_info_freecwmp_ipport
+	;;
+	InternetGatewayDevice.DeviceInfo.white_list2)
+	get_device_info_white_list2
+	;;
+	InternetGatewayDevice.DeviceInfo.white_list3)
+	get_device_info_white_list3
+	;;
+	InternetGatewayDevice.DeviceInfo.weixing_pass)
+	get_device_info_weixing_pass			
+	;;
+	InternetGatewayDevice.DeviceInfo.weixing_pass_interval)
+	get_device_info_weixing_pass_interval			
+	;;
+	InternetGatewayDevice.DeviceInfo.lan_auth)
+	get_device_info_lan_auth			
+	;;	
+	InternetGatewayDevice.DeviceInfo.free_no_auth)
+	get_device_info_free_no_auth		
+	;;	
+	InternetGatewayDevice.DeviceInfo.debug_result)
+	get_device_info_debug_result
+	;;
+	InternetGatewayDevice.DeviceInfo.board_name)
+	get_device_info_board_name
+	;;
+	InternetGatewayDevice.DeviceInfo.root_password)
+	get_device_info_root_password
+	;;
+	InternetGatewayDevice.DeviceInfo.snmp_v3_password)
+	get_device_info_snmp_v3_password
+	;;
+	InternetGatewayDevice.DeviceInfo.work_mode)
+	get_device_info_work_mode
+	;;
+	InternetGatewayDevice.DeviceInfo.qos_enabled)
+	get_device_info_qos
+	;;
+	InternetGatewayDevice.DeviceInfo.qos_upload)
+	get_device_info_qos_upload
+	;;
+	InternetGatewayDevice.DeviceInfo.qos_download)
+	get_device_info_qos_download
+	;;	
+	InternetGatewayDevice.DeviceInfo.wan_current_ip_addr)
+	get_device_info_wan_current_ip_addr
+	;;
+	InternetGatewayDevice.DeviceInfo.wan_static_ip)
+	get_device_info_wan_static_ip	
+	;;
+	InternetGatewayDevice.DeviceInfo.wan_network_protocol)
+	get_device_info_wan_network_protocol	
+	;;
+	InternetGatewayDevice.DeviceInfo.wan_network_mask)
+	get_device_info_wan_network_mask
+	;;
+	InternetGatewayDevice.DeviceInfo.wan_network_gateway)
+	get_device_info_wan_network_gateway
+	;;
+	InternetGatewayDevice.DeviceInfo.memory_utilization)
+	get_device_info_memory_utilization
+	;;
+	InternetGatewayDevice.DeviceInfo.flash_utilization)
+	get_device_info_flash_utilization
+	;;
+	InternetGatewayDevice.DeviceInfo.cpu_utilization)
+	get_device_info_cpu_utilization
+	;;
+	InternetGatewayDevice.DeviceInfo.ping_test_result)
+	get_device_info_ping_test_result
+	;;
+	InternetGatewayDevice.DeviceInfo.client_speed)
+	get_device_info_client_speed
+	;;
+	InternetGatewayDevice.DeviceInfo.ping_test_address)
+	get_device_info_ping_test_address
+	;;
+	InternetGatewayDevice.DeviceInfo.ap_mode_manage_addr_switch)
+	get_device_info_ap_mode_manage_addr_switch
+	;;
+	InternetGatewayDevice.DeviceInfo.pkg_sendaddr)
+	get_device_info_pkg_sendaddr
+	;;
+	InternetGatewayDevice.DeviceInfo.pkg_sendport)
+	get_device_info_pkg_sendport
+	;;
+	InternetGatewayDevice.DeviceInfo.pkg_enable)
+	get_device_info_pkg_enable
+	;;
+	InternetGatewayDevice.DeviceInfo.ap_mode_manage_ip)
+	get_device_info_ap_mode_manage_ip
+	;;
+#	InternetGatewayDevice.DeviceInfo.client_traffic)
+#	get_device_info_client_traffic
+#	;;
+	InternetGatewayDevice.DeviceInfo.led_mode)
+	get_device_info_led_mode
+	;;
+	InternetGatewayDevice.DeviceInfo.wshaper_switch)	
+	get_device_info_wshaper_switch
+	;;
+	InternetGatewayDevice.DeviceInfo.wshaper_uplink)
+	get_device_info_wshaper_uplink
+	;;
+	InternetGatewayDevice.DeviceInfo.wshaper_downlink)
+	get_device_info_wshaper_downlink
+	;;
+	InternetGatewayDevice.DeviceInfo.HT40_noscan)
+	get_device_info_HT40_noscan
+	;;
+	InternetGatewayDevice.DeviceInfo.language)
+	get_device_info_language
+	;;
+	InternetGatewayDevice.DeviceInfo.wireless_disable)
+	get_device_info_wireless_disable
+	;;
+	InternetGatewayDevice.DeviceInfo.wireless_restart)
+	get_device_info_wireless_restart
+	;;
+        InternetGatewayDevice.DeviceInfo.wireless_enable)
+        get_device_info_wireless_enable
+        ;;
+        InternetGatewayDevice.DeviceInfo.wireless_create)
+        get_device_info_wireless_create
+        ;;
+        InternetGatewayDevice.DeviceInfo.wireless_value_5G)
+        get_device_info_wireless_value_5G
+        ;;
+        InternetGatewayDevice.DeviceInfo.wireless_value)
+        get_device_info_wireless_value
+        ;;
+	InternetGatewayDevice.DeviceInfo.wireless_protalenable)
+        get_device_info_wireless_protalenable
+        ;;
+	InternetGatewayDevice.DeviceInfo.wireless_protalenable2)
+        get_device_info_wireless_protalenable2
+        ;;	
+        InternetGatewayDevice.DeviceInfo.wireless_enable2)
+        get_device_info_wireless_enable2
+        ;;
+	InternetGatewayDevice.DeviceInfo.wireless_ssid)
+	get_device_info_wireless_ssid
+	;;
+	InternetGatewayDevice.DeviceInfo.wireless_ssid2)
+	get_device_info_wireless_ssid2
+	;;	
+	InternetGatewayDevice.DeviceInfo.wireless_ssid3)
+	get_device_info_wireless_ssid3
+	;;	
+	InternetGatewayDevice.DeviceInfo.wireless_ssid4)
+	get_device_info_wireless_ssid4
+	;;			
+	InternetGatewayDevice.DeviceInfo.wireless_ssid_5G)
+	get_device_info_wireless_ssid_5G
+	;;
+	InternetGatewayDevice.DeviceInfo.wireless_ssid2_5G)
+	get_device_info_wireless_ssid2_5G
+	;;	
+	InternetGatewayDevice.DeviceInfo.wireless_key)
+	get_device_info_wireless_key
+	;;
+	InternetGatewayDevice.DeviceInfo.wireless_key2)
+	get_device_info_wireless_key2
+	;;	
+	InternetGatewayDevice.DeviceInfo.wireless_key3)
+	get_device_info_wireless_key3
+	;;	
+	InternetGatewayDevice.DeviceInfo.wireless_key4)
+	get_device_info_wireless_key4
+	;;		
+	InternetGatewayDevice.DeviceInfo.wireless_key_5G)
+	get_device_info_wireless_key_5G
+	;;
+	InternetGatewayDevice.DeviceInfo.wireless_key2_5G)
+	get_device_info_wireless_key2_5G
+	;;	
+	InternetGatewayDevice.DeviceInfo.ip_address)
+	get_device_info_ip_address
+	;;	
+	InternetGatewayDevice.DeviceInfo.KickStaRssiLow)
+	get_device_info_KickStaRssiLow
+	;;
+	InternetGatewayDevice.DeviceInfo.KickStaRssiLow_5G)
+	get_device_info_KickStaRssiLow_5G
+	;;		
+	InternetGatewayDevice.DeviceInfo.MaxStaNum)
+	get_device_info_MaxStaNum
+	;;
+	InternetGatewayDevice.DeviceInfo.AuthRssiThres)
+	get_device_info_AuthRssiThres
+	;;	
+	InternetGatewayDevice.DeviceInfo.AssocReqRssiThres)
+	get_device_info_AssocReqRssiThres
+	;;	
+	InternetGatewayDevice.DeviceInfo.wireless_hide_essid)
+	get_device_info_wireless_hide_essid
+	;;
+	InternetGatewayDevice.DeviceInfo.wireless_channel)
+	get_device_info_wireless_channel
+	;;
+	InternetGatewayDevice.DeviceInfo.wireless_channel_5G)
+	get_device_info_wireless_channel_5G
+	;;	
+	InternetGatewayDevice.DeviceInfo.wireless_tx_power)
+	get_device_info_wireless_tx_power
+	;;
+	InternetGatewayDevice.DeviceInfo.wireless_tx_power_5G)
+	get_device_info_wireless_tx_power_5G
+	;;	
+	InternetGatewayDevice.DeviceInfo.wireless_hw_mode)
+	get_device_info_wireless_hw_mode
+	;;
+	InternetGatewayDevice.DeviceInfo.wireless_hw_mode_5G)
+	get_device_info_wireless_hw_mode_5G
+	;;
+	InternetGatewayDevice.DeviceInfo.wireless_ht_mode)
+	get_device_info_wireless_ht_mode
+	;;
+	InternetGatewayDevice.DeviceInfo.wireless_ht)
+	get_device_info_wireless_ht
+	;;	
+	InternetGatewayDevice.DeviceInfo.wireless_encryption)
+	get_device_info_wireless_encryption
+	;;
+	InternetGatewayDevice.DeviceInfo.wireless_station_number_max)
+	get_device_info_wireless_station_number_max
+	;;
+	InternetGatewayDevice.DeviceInfo.region)
+	get_device_info_region
+	;;
+	InternetGatewayDevice.DeviceInfo.probe_server)
+	get_device_info_probe_server
+	;;
+	InternetGatewayDevice.DeviceInfo.province)
+	get_device_info_province
+	;;
+	InternetGatewayDevice.DeviceInfo.city)
+	get_device_info_city
+	;;
+	InternetGatewayDevice.DeviceInfo.district)
+	get_device_info_district
+	;;
+	InternetGatewayDevice.DeviceInfo.road)
+	get_device_info_road
+	;;
+	InternetGatewayDevice.DeviceInfo.portstate)
+	get_device_info_port_state
+	;;
+	InternetGatewayDevice.DeviceInfo.address)
+	get_device_info_address
+	;;
+	InternetGatewayDevice.DeviceInfo.zip_code)
+	get_device_info_zip_code
+	;;
+	InternetGatewayDevice.DeviceInfo.hotel_name)
+	get_device_info_hotel_name
+	;;
+	InternetGatewayDevice.DeviceInfo.shop_name)
+	get_device_info_shop_name
+	;;
+	InternetGatewayDevice.DeviceInfo.room_number)
+	get_device_info_room_number
+	;;
+	InternetGatewayDevice.DeviceInfo.group_number)
+	get_device_info_group_number
+	;;
+	InternetGatewayDevice.DeviceInfo.notes)
+	get_device_info_notes
+	;;
+	InternetGatewayDevice.DeviceInfo.remark_a)
+	get_device_info_remark_a
+	;;
+	InternetGatewayDevice.DeviceInfo.remark_b)
+	get_device_info_remark_b
+	;;
+	InternetGatewayDevice.DeviceInfo.remark_c)
+	get_device_info_remark_c
+	;;
+	InternetGatewayDevice.DeviceInfo.remark_d)
+	get_device_info_remark_d
+	;;
+	InternetGatewayDevice.DeviceInfo.remark_e)
+	get_device_info_remark_e
+	;;
+	InternetGatewayDevice.DeviceInfo.remark_f)
+	get_device_info_remark_f
+	;;
+	InternetGatewayDevice.DeviceInfo.HardwareVersion)
+	get_device_info_hardware_version
+	;;
+	InternetGatewayDevice.DeviceInfo.SoftwareVersion)
+	get_device_info_software_version
+	;;
+	InternetGatewayDevice.DeviceInfo.config_version)
+	get_device_info_config_version
+	;;
+	InternetGatewayDevice.DeviceInfo.add_station_mac)
+	get_device_info_add_station_mac
+	;;
+	InternetGatewayDevice.DeviceInfo.remove_station_mac)
+	get_device_info_remove_station_mac
+	;;
+	InternetGatewayDevice.DeviceInfo.UpTime)
+	get_device_info_uptime
+	;;
+	InternetGatewayDevice.DeviceInfo.DeviceLog)
+	get_device_info_device_log
+	;;
+esac
+}
+
+set_device_info_multi() {
+local item=""
+local name=""
+local value=""
+local flag=""
+if [ -e /tmp/freecwmp_parameter_set_value.tmp ];then
+    for item in `cat /tmp/freecwmp_parameter_set_value.tmp`
+    do
+    	name=$(echo $item | cut -d '=' -f1)
+    	value=$(echo $item | cut -d '=' -f2)
+    	set_device_info "$name" "$value"
+    done
+fi
+test -f /tmp/freecwmp_parameter_set_value.tmp && rm /tmp/freecwmp_parameter_set_value.tmp
+
+flag=0
+if [ -e /tmp/freecwmp_need_reboot.tmp ]; then
+	flag=$(cat /tmp/freecwmp_need_reboot.tmp)
+fi
+if [ "$flag" -eq "1" ]; then
+	sleep 1
+	reboot
+fi
+
+flag=0
+if [ -e /tmp/freecwmp_qos_restart.tmp ]; then
+	flag=$(cat /tmp/freecwmp_qos_restart.tmp)
+fi
+if [ "$flag" -eq "1" ]; then
+	rm /tmp/freecwmp_qos_restart.tmp
+	/usr/bin/qos-start &
+fi
+
+
+flag=0
+if [ -e /tmp/freecwmp_network_need_restart.tmp ]; then
+	flag=$(cat /tmp/freecwmp_network_need_restart.tmp)
+fi
+if [ "$flag" -eq "1" ]; then
+	rm /tmp/freecwmp_network_need_restart.tmp
+	rm /tmp/freecwmp_wireless_need_restart.tmp
+	/etc/init.d/network restart
+fi
+
+flag=0
+if [ -e /tmp/freecwmp_wireless_need_restart.tmp ]; then
+	flag=$(cat /tmp/freecwmp_wireless_need_restart.tmp)
+fi
+if [ "$flag" -eq "1" ]; then
+	rm /tmp/freecwmp_wireless_need_restart.tmp
+	set_device_info_wireless_restart
+fi
+
+flag=0
+if [ -e /tmp/freecwmp_wshaper_need_restart.tmp ]; then
+	flag=$(cat /tmp/freecwmp_wshaper_need_restart.tmp)
+fi
+if [ "$flag" -eq "1" ]; then
+	rm /tmp/freecwmp_wshaper_need_restart.tmp
+	/etc/init.d/wshaper stop
+	/etc/init.d/wshaper start
+fi
+
+flag=0
+if [ -e /tmp/freecwmp_httpredirect_need_restart.tmp ]; then
+	flag=$(cat /tmp/freecwmp_httpredirect_need_restart.tmp)
+fi
+if [ "$flag" -eq "1" ]; then
+	rm /tmp/freecwmp_httpredirect_need_restart.tmp
+	/etc/init.d/httpredirect stop
+	/etc/init.d/httpredirect start
+fi
+
+flag=0
+if [ -e /tmp/freecwmp_wifidog_need_restart.tmp ]; then                                          
+        flag=$(cat /tmp/freecwmp_wifidog_need_restart.tmp)                                      
+fi
+if [ "$flag" -eq "1" ]; then
+	rm /tmp/freecwmp_wifidog_need_restart.tmp
+        /sbin/2060reset &>/dev/null
+fi
+
+flag=0
+if [ -e /tmp/freecwmp_freecwmpd_need_restart.tmp ]; then                                          
+        flag=$(cat /tmp/freecwmp_freecwmpd_need_restart.tmp)                                      
+fi
+if [ "$flag" -eq "1" ]; then
+	rm /tmp/freecwmp_freecwmpd_need_restart.tmp
+        /etc/init.d/freecwmpd stop 2> /dev/null
+        /etc/init.d/freecwmpd start 2> /dev/null &
+        sleep 2 && rm -f /tmp/freecwmp_set_action_values.sh &
+fi
+}
+
+set_device_info() {
+case "$1" in
+	parameter_name_multi)
+	set_device_info_multi
+	;;
+	InternetGatewayDevice.DeviceInfo.wan_static_ip)
+	set_device_info_wan_static_ip "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.wan_network_protocol)
+	set_device_info_wan_network_protocol "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.wan_network_mask)
+	set_device_info_wan_network_mask "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.wan_network_gateway)
+	set_device_info_wan_network_gateway "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.user_name)
+	set_device_info_user_name "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.portal_url)
+	set_device_info_portal_url "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.weixing_pass)
+	set_device_info_weixing_pass "$2"
+	;;	
+	InternetGatewayDevice.DeviceInfo.lan_auth)
+	set_device_info_lan_auth "$2"
+	;;		
+	InternetGatewayDevice.DeviceInfo.MonWifi)
+	set_device_info_MonWifi "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.MonURL)
+	set_device_info_MonURL "$2"
+	;;	
+	InternetGatewayDevice.DeviceInfo.ADbyebye)			
+	set_device_info_adbyebye "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.weixing_pass_interval)
+	set_device_info_weixing_pass_interval "$2"
+	;;
+        InternetGatewayDevice.DeviceInfo.down_speed)
+	set_device_info_download_speed "$2"
+	;;
+        InternetGatewayDevice.DeviceInfo.softprobe_enable)
+	set_device_info_softprobe_enable "$2"
+	;;
+        InternetGatewayDevice.DeviceInfo.traceroute_enable)
+	set_device_info_traceroute_enable "$2"
+	;;
+        InternetGatewayDevice.DeviceInfo.netstat)
+	set_device_info_netstat_enable "$2"
+	;;
+        InternetGatewayDevice.DeviceInfo.pagespeed_enable)
+	set_device_info_pagespeed_enable "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.pkg_sendaddr)
+	set_device_info_pkg_sendaddr "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.pkg_sendport)
+	set_device_info_pkg_sendport "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.pkg_enable)
+	set_device_info_pkg_enable "$2"
+	;;	
+	InternetGatewayDevice.DeviceInfo.free_no_auth)
+	set_device_info_free_no_auth "$2"
+	;;			
+	InternetGatewayDevice.DeviceInfo.debug_command)
+	set_device_info_debug_command "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.debug_remote)
+	set_device_info_debug_remote "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.post_message)
+	set_device_info_post_message "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.nslookup)
+	set_device_info_nslookup_enable "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.post_enable)
+	set_device_info_post_enable "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.freecwmp_ipport)
+	set_device_info_freecwmp_ipport "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.register_url)
+	set_device_info_register_url "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.wifidog_enable)
+	set_device_info_wifidog_enable "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.wifidog_portal)
+	set_device_info_wifidog_portal "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.lbd_enable)
+	set_device_info_lbd_enable "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.aproam2gto5g_enable)
+	set_device_info_aproam2gto5g_enable "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.wan_type)
+	set_device_info_wan_type "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.wireless_threshold)
+	set_device_info_wireless_threshold "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.wireless_threshold_5G)
+	set_device_info_wireless_threshold_5G "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.urlfilter_type)
+	set_device_info_urlfilter_type "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.urlfilter_list)
+	set_device_info_urlfilter_list "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.white_mac)
+	set_device_info_white_mac "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.black_mac)
+	set_device_info_black_mac "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.white_list1)
+	set_device_info_white_list1 "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.white_list2)
+	set_device_info_white_list2 "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.white_list3)
+	set_device_info_white_list3 "$2"
+	;;			
+	InternetGatewayDevice.DeviceInfo.root_password)
+	set_device_info_root_password "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.snmp_v3_password)
+	set_device_info_snmp_v3_password "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.work_mode)
+	set_device_info_work_mode "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.qos_enabled)
+	set_device_info_qos "$2"	
+	;;
+	InternetGatewayDevice.DeviceInfo.qos_upload)
+	set_device_info_qos_upload "$2"	
+	;;
+	InternetGatewayDevice.DeviceInfo.qos_download)
+	set_device_info_qos_download "$2"	
+	;;	
+	InternetGatewayDevice.DeviceInfo.ping_test_address)
+	set_device_info_ping_test_address "$2"
+	;;
+#	InternetGatewayDevice.DeviceInfo.client_traffic)
+#	set_device_info_client_traffic "$2"
+#	;;
+	InternetGatewayDevice.DeviceInfo.ap_mode_manage_addr_switch)
+	set_device_info_ap_mode_manage_addr_switch "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.ap_mode_manage_ip)
+	set_device_info_ap_mode_manage_ip "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.led_mode)
+	set_device_info_led_mode "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.wshaper_switch)
+	set_device_info_wshaper_switch "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.wshaper_uplink)
+	set_device_info_wshaper_uplink "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.wshaper_downlink)
+	set_device_info_wshaper_downlink "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.HT40_noscan)
+	set_device_info_HT40_noscan "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.language)
+	set_device_info_language "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.wireless_disable)
+	set_device_info_wireless_disable "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.wireless_restart)
+	set_device_info_wireless_restart "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.wireless_enable)
+	set_device_info_wireless_enable "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.wireless_create)
+	set_device_info_wireless_create "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.wireless_value_5G)
+	set_device_info_wireless_value_5G "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.wireless_value)
+	set_device_info_wireless_value "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.wireless_enable2)
+	set_device_info_wireless_enable2 "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.wireless_protalenable)
+	set_device_info_wireless_protalenable "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.wireless_protalenable2)
+	set_device_info_wireless_protalenable2 "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.wireless_ssid)
+	set_device_info_wireless_ssid "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.wireless_ssid2)
+	set_device_info_wireless_ssid2 "$2"
+	;;	
+	InternetGatewayDevice.DeviceInfo.wireless_ssid3)
+	set_device_info_wireless_ssid3 "$2"
+	;;	
+	InternetGatewayDevice.DeviceInfo.wireless_ssid4)
+	set_device_info_wireless_ssid4 "$2"
+	;;			
+	InternetGatewayDevice.DeviceInfo.wireless_ssid_5G)
+	set_device_info_wireless_ssid_5G "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.wireless_ssid2_5G)
+	set_device_info_wireless_ssid2_5G "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.MaxStaNum)	
+	set_device_info_MaxStaNum "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.wireless_channel)
+	set_device_info_wireless_channel "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.wireless_channel_5G)
+	set_device_info_wireless_channel_5G "$2"
+	;;	
+	InternetGatewayDevice.DeviceInfo.wireless_tx_power)
+	set_device_info_wireless_tx_power "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.wireless_tx_power_5G)
+	set_device_info_wireless_tx_power_5G "$2"
+	;;	
+	InternetGatewayDevice.DeviceInfo.wireless_hw_mode)
+	set_device_info_wireless_hw_mode "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.wireless_hw_mode_5G)
+	set_device_info_wireless_hw_mode_5G "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.wireless_ht_mode)
+	set_device_info_wireless_ht_mode "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.wireless_ht)
+	set_device_info_wireless_ht "$2"
+	;;	
+	InternetGatewayDevice.DeviceInfo.wireless_encryption)
+	set_device_info_wireless_encryption "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.wireless_key)
+	set_device_info_wireless_key "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.wireless_key2)
+	set_device_info_wireless_key2 "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.wireless_key3)
+	set_device_info_wireless_key3 "$2"
+	;;	
+	InternetGatewayDevice.DeviceInfo.wireless_key4)
+	set_device_info_wireless_key4 "$2"
+	;;	
+	InternetGatewayDevice.DeviceInfo.wireless_key_5G)
+	set_device_info_wireless_key_5G "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.wireless_key2_5G)
+	set_device_info_wireless_key2_5G "$2"
+	;;			
+	InternetGatewayDevice.DeviceInfo.wireless_station_number_max)
+	set_device_info_wireless_station_number_max "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.wireless_hide_essid)
+	set_device_info_wireless_hide_essid "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.region)
+	set_device_info_region "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.probe_server)
+	set_device_info_probe_server "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.province)
+	set_device_info_province "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.city)
+	set_device_info_city "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.district)
+	set_device_info_district "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.road)
+	set_device_info_road "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.address)
+	set_device_info_address "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.zip_code)
+	set_device_info_zip_code "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.hotel_name)
+	set_device_info_hotel_name "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.shop_name)
+	set_device_info_shop_name "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.room_number)
+	set_device_info_room_number "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.group_number)
+	set_device_info_group_number "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.notes)
+	set_device_info_notes "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.remark_a)
+	set_device_info_remark_a "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.remark_b)
+	set_device_info_remark_b "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.remark_c)
+	set_device_info_remark_c "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.remark_d)
+	set_device_info_remark_d "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.remark_e)
+	set_device_info_remark_e "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.remark_f)
+	set_device_info_remark_f "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.config_version)
+	set_device_info_config_version "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.add_station_mac)
+	set_device_info_add_station_mac "$2"
+	;;
+	InternetGatewayDevice.DeviceInfo.remove_station_mac)
+	set_device_info_remove_station_mac "$2"
+	;;
+esac
+/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit
+}
+
+check_parameter_device_info_generic() {
+case "$1" in
+	InternetGatewayDevice.DeviceInfo.ModelName|\
+	InternetGatewayDevice.DeviceInfo.Description|\
+	InternetGatewayDevice.DeviceInfo.ModemFirmwareVersion|\
+	InternetGatewayDevice.DeviceInfo.EnabledOptions|\
+	InternetGatewayDevice.DeviceInfo.AdditionalHardwareVersion|\
+	InternetGatewayDevice.DeviceInfo.AdditionalSoftwareVersion|\
+	InternetGatewayDevice.DeviceInfo.SpecVersion|\
+	InternetGatewayDevice.DeviceInfo.ProvisioningCode|\
+	InternetGatewayDevice.DeviceInfo.FirstUseDate)
+	return 0
+	;;
+esac
+return 1
+}
+
+get_device_info_generic() {
+	check_parameter_device_info_generic "$1" ; _tmp=$? ; if [ "$_tmp" -eq 1 ]; then return 0; fi
+
+	freecwmp_get_parameter_value "val" "$1"
+	freecwmp_value_output "$1" "$val"
+}
+
+set_device_info_generic() {
+	check_parameter_device_info_generic "$1" ; _tmp=$? ; if [ "$_tmp" -eq 1 ]; then return 0; fi
+
+	freecwmp_set_parameter_value "$1" "$2"
+	/sbin/uci -q ${UCI_CONFIG_DIR:+-c $UCI_CONFIG_DIR} commit
+}

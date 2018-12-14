@@ -1,0 +1,63 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2012-2013 OpenWrt.org
+
+START=90
+
+find_mtd_part() {
+        local PART="$(grep "\"$1\"" /proc/mtd | awk -F: '{print $1}')"
+        local INDEX="${PART##mtd}"
+        local PREFIX=/dev/mtdblock
+
+        [ -d /dev/mtdblock ] && PREFIX=/dev/mtdblock/
+        echo "${INDEX:+$PREFIX$INDEX}"
+}
+
+get_product_class(){                                                                                     
+mode=$(grep DISTRIB_CODENAME /etc/openwrt_release |awk -F= '{print $2}' | tr -d "\'"| tr -s {a-z} {A-Z}) 
+wd=$(grep wifi-device /etc/config/wireless | wc -l)                                
+case "$mode" in                                 
+   AP100)                                        
+       [ "$wd" -ge "2" ] && mode="AP200"
+   ;;                                           
+   AC100)                                        
+       [ "$wd" -ge "2" ] && mode="AC200"
+   ;;                                           
+   AH100)                                               
+       [ "$wd" -ge "2" ] && mode="AH200"
+   ;;                                           
+   *)                                                        
+   ;;                   
+esac                    
+echo "$mode"            
+}           
+
+start() {
+        local freecwmp_enable=$(uci -q get freecwmp.@local[0].freecwmp_enable)
+        if [ -z "$freecwmp_enable" ] ; then
+                freecwmp_enable="1"
+        fi
+        if [ "1" = "$freecwmp_enable" ];then
+                factory_part=$(find_mtd_part art)
+                #mac=$(dd bs=1   count=6 if=$factory_part 2>/dev/null | /usr/sbin/maccalc bin2mac)
+                mac=`dd bs=1 skip=0  count=6 if=$factory_part 2>/dev/null | hexdump -vC|grep 00000000|awk '{print toupper($2$3$4$5$6$7)}'`
+                uci -q set freecwmp.@device[0].serial_number="$mac"
+		#sfver=`/usr/sbin/freecwmpd -v 2>/dev/null`
+		manu=$(grep DISTRIB_ID /etc/openwrt_release |awk -F= '{print $2}' | tr -d "\'")
+                [ "$manu" == "SZTozed" ] && manu="TZ"
+		sfver=$(grep DISTRIB_RELEASE /etc/openwrt_release |awk -F= '{print $2}' | tr -d "\'")
+		hfver=$(cat /etc/version)
+		mode=$(get_product_class)
+		[ "$manu" != "" ] && uci -q set freecwmp.@device[0].manufacturer="$manu"
+		[ "$sfver" != "" ] && uci -q set freecwmp.@device[0].software_version="$sfver"
+		[ "$hfver" != "" ] && uci -q set freecwmp.@device[0].hardware_version="$hfver"
+		[ "$hfver" != "" ] && uci -q set freecwmp.@device[0].product_class="$hfver"
+                uci commit freecwmp.@device[0]
+                service_start /usr/sbin/freecwmpd
+        else
+                stop
+        fi
+}
+
+stop() {
+        service_stop /usr/sbin/freecwmpd
+}
