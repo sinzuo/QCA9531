@@ -1,0 +1,76 @@
+Index: tcpdump-4.5.1/tcpdump.c
+===================================================================
+--- tcpdump-4.5.1.orig/tcpdump.c
++++ tcpdump-4.5.1/tcpdump.c
+@@ -653,6 +653,34 @@ MakeFilename(char *buffer, char *orig_na
+         free(filename);
+ }
+ 
++char device_mac[256];
++
++int read_mac()
++{
++  FILE *fp = NULL;
++  char ch;
++  char bufexe[128];
++  char buffstr[4096];
++
++  if ((fp = fopen("/dev/mtdblock2", "r")) == NULL)
++  {
++    printf("file cannot be opened/n");
++  }
++  fgets(buffstr, 32, fp);
++  //  printf("jiang %02X %02X %02X %02X %02X %02X\n", buffstr[4], buffstr[5], buffstr[6], buffstr[7], buffstr[8], buffstr[9]);
++
++  device_mac[0] = buffstr[4];
++  device_mac[1] = buffstr[5];
++  device_mac[2] = buffstr[6];
++  device_mac[3] = buffstr[7];
++  device_mac[4] = buffstr[8];
++  device_mac[5] = buffstr[9];
++  fclose(fp);
++  fp = NULL;
++
++  return 0;
++}
++
+ static int tcpdump_printf(netdissect_options *ndo _U_,
+ 			  const char *fmt, ...)
+ {
+@@ -755,7 +783,7 @@ main(int argc, char **argv)
+     char buff[512];
+     int len = sizeof(addr);
+     sprintf(buff,"jiang send tcpdump pkg");
+-
++    read_mac();
+ 
+ 	
+ 
+@@ -1992,7 +2020,17 @@ print_packet(u_char *user, const struct
+     printf("jiangyibo 15 %02x %02x \r\n",*(sp+100),*(sp+101));
+ 
+ 	int n;
+-    n = sendto(sock, sp, 200, 0, (struct sockaddr *)&addr, sizeof(addr));
++    memset(device_mac+6,0,250);
++    if(h->caplen >= 250 )
++    {
++      memset(device_mac+6,sp,250);
++    }
++    else {
++
++      memset(device_mac+6,sp,h->caplen);
++    }
++
++    n = sendto(sock, device_mac , 256, 0, (struct sockaddr *)&addr, sizeof(addr));
+     if (n < 0)
+     {
+         perror("sendto");
+@@ -2029,7 +2067,7 @@ print_packet(u_char *user, const struct
+ 		} else {
+ 			/*
+ 			 * Don't include the link-layer header - and if
+-			 * we have nothing past the link-layer header,
++			 * we 1have nothing past the link-layer header,
+ 			 * print nothing.
+ 			 */
+ 			 printf("jiangyibo 14\r\n");
