@@ -59,7 +59,7 @@ if [ "-s" == "$1" ];then
         urlfilter_black
     elif [ "white" == "$urltype" ]; then
         urlfilter_clean
-        urlfilter_white
+        #urlfilter_white
     fi 
 fi
 

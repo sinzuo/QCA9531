@@ -37,6 +37,9 @@ start() {
                 freecwmp_enable="1"
         fi
         if [ "1" = "$freecwmp_enable" ];then
+                urlfilter_cmd=/usr/share/freecwmp/functions/urlfilter
+                test -f $urlfilter_cmd && $urlfilter_cmd -s
+
                 factory_part=$(find_mtd_part art)
                 #mac=$(dd bs=1   count=6 if=$factory_part 2>/dev/null | /usr/sbin/maccalc bin2mac)
                 mac=`dd bs=1 skip=0  count=6 if=$factory_part 2>/dev/null | hexdump -vC|grep 00000000|awk '{print toupper($2$3$4$5$6$7)}'`
