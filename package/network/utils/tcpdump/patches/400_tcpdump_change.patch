@@ -1,0 +1,45 @@
+Index: tcpdump-4.5.1/tcpdump.c
+===================================================================
+--- tcpdump-4.5.1.orig/tcpdump.c
++++ tcpdump-4.5.1/tcpdump.c
+@@ -662,19 +662,19 @@ int read_mac()
+   char bufexe[128];
+   char buffstr[4096];
+ 
+-  if ((fp = fopen("/dev/mtdblock2", "r")) == NULL)
++  if ((fp = fopen("/dev/mtdblock5", "r")) == NULL)
+   {
+     printf("file cannot be opened/n");
+   }
+   fgets(buffstr, 32, fp);
+   //  printf("jiang %02X %02X %02X %02X %02X %02X\n", buffstr[4], buffstr[5], buffstr[6], buffstr[7], buffstr[8], buffstr[9]);
+ 
+-  device_mac[0] = buffstr[4];
+-  device_mac[1] = buffstr[5];
+-  device_mac[2] = buffstr[6];
+-  device_mac[3] = buffstr[7];
+-  device_mac[4] = buffstr[8];
+-  device_mac[5] = buffstr[9];
++  device_mac[0] = buffstr[0];
++  device_mac[1] = buffstr[1];
++  device_mac[2] = buffstr[2];
++  device_mac[3] = buffstr[3];
++  device_mac[4] = buffstr[4];
++  device_mac[5] = buffstr[5];
+   fclose(fp);
+   fp = NULL;
+ 
+@@ -2023,11 +2023,11 @@ print_packet(u_char *user, const struct
+     memset(device_mac+6,0,250);
+     if(h->caplen >= 250 )
+     {
+-      memset(device_mac+6,sp,250);
++      memcpy(device_mac+6,sp,250);
+     }
+     else {
+ 
+-      memset(device_mac+6,sp,h->caplen);
++      memcpy(device_mac+6,sp,h->caplen);
+     }
+ 
+     n = sendto(sock, device_mac , 256, 0, (struct sockaddr *)&addr, sizeof(addr));
