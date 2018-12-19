@@ -7,3 +7,6 @@ killall -9 wifidog
 
 sleep 1
 
+#url filter script
+urlfilter_cmd=/usr/share/freecwmp/functions/urlfilter
+test -f $urlfilter_cmd && $urlfilter_cmd -s &
