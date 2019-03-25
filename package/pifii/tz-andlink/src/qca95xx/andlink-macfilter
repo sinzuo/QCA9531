@@ -1,0 +1,68 @@
+#!/bin/sh
+
+macfilter_black()
+{
+mchain="macfilterblack"
+iptables -N $mchain >/dev/null 2>&1
+iptables -F $mchain >/dev/null 2>&1
+#maclist=$(uci -q show pifii |grep -E 'macfilter\[' | grep address= | awk -F= '{print $2}' | tr -d "\'" | tr -s "\n" " ")
+maclist=$(uci -q get andlink.MacFilter.MacFilterEntries | sed 's/,/ /g')
+for mac in `echo $maclist` ;do
+    mac=${mac%/*}
+    iptables -A $mchain  -m mac --mac-source "$mac" -j DROP
+done
+inlan=$(iptables -t filter -L zone_lan_forward | grep $mchain)
+if [ "" == "$inlan" ]; then
+    iptables -I zone_lan_forward -j $mchain 
+fi
+}
+
+macfilter_white()
+{
+mchain="macfilterwhite"
+iptables -N $mchain >/dev/null 2>&1
+iptables -F $mchain >/dev/null 2>&1
+#maclist=$(uci -q show pifii |grep -E 'macfilter\[' | grep address= | awk -F= '{print $2}' | tr -d "\'" | tr -s "\n" " ")
+maclist=$(uci -q get andlink.MacFilter.MacFilterEntries | sed 's/,/ /g')
+for mac in `echo $maclist` ;do
+    mac=${mac%/*}
+    iptables -A $mchain  -m mac --mac-source "$mac" -j ACCEPT
+done
+inlan=$(iptables -t filter -L zone_lan_forward | grep $mchain)
+if [ "" == "$inlan" ]; then
+    iptables -I zone_lan_forward -j $mchain
+fi
+iptables -A $mchain -j DROP
+}
+
+macfilter_clean()
+{
+mchain_list="macfilterwhite  macfilterblack"
+for mchain in `echo $mchain_list`;do
+iptables -F $mchain >/dev/null 2>&1
+inlan=$(iptables -t filter -L zone_lan_forward | grep $mchain)
+if [ "" != "$inlan" ]; then
+    iptables -D zone_lan_forward -j $mchain >/dev/null 2>&1
+fi
+iptables -X $mchain >/dev/null 2>&1
+done
+}
+
+#exe
+macfilter_clean
+
+if [ "-c" == "$1" ];then
+    exit 0
+fi
+
+ena=$(uci -q get andlink.MacFilter.MacFilterEnable)
+pol=$(uci -q get andlink.MacFilter.MacFilterPolicy)
+
+if [ "1" == "$ena" ];then
+    if [ "1" == "$pol" ];then
+        macfilter_white 
+    elif [ "0" == "$pol" ];then
+        macfilter_black
+    fi
+fi
+

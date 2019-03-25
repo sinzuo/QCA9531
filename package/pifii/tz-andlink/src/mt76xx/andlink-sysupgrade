@@ -1,0 +1,92 @@
+#!/usr/bin/lua
+local json = require("luci.json")
+local util = require ("luci.util")
+require "luci.model.uci"
+local uci = luci.model.uci.cursor()
+local am = require("andlinkcommon")
+
+local andlk = "andlink"
+
+--log 
+am.log_file = "/tmp/tzcoapserver.log"
+local D = am.log_info 
+--log end
+
+function usage()
+print([[usage:andlink-sysupgrade [-u url] [-a ip] [-d delay] 
+       -u  url     url of file for download 
+       -a  ip      server ip 
+       -d  delay   delay download (default:3)
+examples:
+       andlink-sysupgrade -u http://192.168.1.8/firmware.bin -a 192.168.1.1
+       andlink-sysupgrade -u http://192.168.1.8/firmware.bin -a 192.168.1.1 -d 10
+       ]])
+end
+
+function arg_parse(arg)
+local res=nil
+local i=1
+
+--if 1 > #arg then
+--    usage()
+--end
+
+while i <= #arg do
+    if "-u" == arg[i] and arg[i+1] and "-" ~= string.sub(arg[i+1],1,1) then
+       if not res then res = {} end
+       res["url"] = arg[i+1]
+       i = i + 1 
+    elseif "-a" == arg[i] and arg[i+1] and "-" ~= string.sub(arg[i+1],1,1) then
+       if not res then res = {} end
+       res["ip"] = arg[i+1]
+       i = i + 1 
+    elseif "-d" == arg[i] and arg[i+1] and "-" ~= string.sub(arg[i+1],1,1) then
+       if not res then res = {} end
+       res["delay"] = tonumber(arg[i+1]) or 3
+       i = i + 1 
+    end 
+    i = i + 1 
+end
+return res
+end
+
+--main
+local arg_t = arg_parse(arg)
+if not arg_t or not arg_t["url"] or not arg_t["ip"] then
+   usage() 
+   os.exit(1)
+end
+local delay = tonumber(arg_t["delay"]) or 2
+os.execute("sleep "..delay)
+D("start download")
+uci:load(andlk)
+local devid = uci:get(andlk,"andlink","device_id")
+local gw = uci:get(andlk,"andlink","gateway")
+if not devid or "" == devid or not gw or "" == gw then
+    D("device no register,don't download or remote sysupgrade")
+end
+local d={deviceId=devid,eventType="File"}
+local cmd = nil
+local res = nil
+local dres = am.download(arg_t["url"],"/tmp/")
+if 0 == dres then
+    d["data"] = {respCode=2000,respCont="File Transfer Complete"}
+else
+    d["data"] = {respCode=2003,respCont="File Transfer interrupt"}
+end
+d["timestamp"] = os.time()
+cmd = string.format([[coap-client coap://%s/device/inform/data -B 2 -m POST -e '%s']],arg_t["ip"],json.encode(d))
+D(cmd)
+res = util.exec(cmd)
+D(res)
+if 0 == dres then
+    local filepath = "/tmp/"..am.get_file_name(arg_t["url"])
+    D(filepath)
+    if not uci:get(andlk,"event") then
+        uci:section(andlk,"event","event")
+    end
+    os.execute(string.format([[sleep 3 && sysupgrade -c %s >/dev/null 2>&1 &]],filepath))
+    local sv=util.exec([[cat /etc/openwrt_version | tr -d "\n|\r"]])
+    uci:set(andlk,"event","version",sv)
+    uci:commit(andlk)
+end

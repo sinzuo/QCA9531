@@ -1,0 +1,33 @@
+LIBCOAP=libcoap.a
+LIBCOAPDIR=./libcoap
+
+LIBAESCBC128=libaescbc128.a
+LIBAESCBC128DIR=./aescbc128
+
+LIBCJSON=libcjson.a
+LIBCJSONDIR=./cjson
+
+PROGRAM=coap-server
+PROGRAMDIR=./tozed
+
+CFLAGS += -std=c99
+
+all:$(PROGRAM)
+
+$(PROGRAM):$(LIBCOAP) $(LIBAESCBC128) $(LIBCJSON)
+	$(MAKE) -C $(PROGRAMDIR) 
+
+$(LIBCOAP):
+	$(MAKE) -C $(LIBCOAPDIR) 
+
+$(LIBAESCBC128):
+	$(MAKE) -C $(LIBAESCBC128DIR) 
+
+$(LIBCJSON):
+	$(MAKE) -C $(LIBCJSONDIR) 
+
+clean:
+	$(MAKE) -C $(LIBCJSONDIR) clean
+	$(MAKE) -C $(LIBAESCBC128DIR) clean
+	$(MAKE) -C $(LIBCOAPDIR) clean
+	$(MAKE) -C $(PROGRAMDIR) clean

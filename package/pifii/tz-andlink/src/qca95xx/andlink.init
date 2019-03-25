@@ -1,0 +1,24 @@
+#!/bin/sh /etc/rc.common
+
+START=97
+USE_PROCD=1
+
+ser="/usr/sbin/coap-server"
+rep="/usr/sbin/andlink-report"
+
+start_service() {
+        procd_open_instance
+        procd_set_param command $ser -l -v 10 
+        procd_set_param respawn
+        procd_close_instance
+
+        procd_open_instance
+        procd_set_param command $rep
+        procd_set_param respawn
+        procd_close_instance
+}
+
+stop(){
+	service_stop $ser
+	service_stop $rep
+}

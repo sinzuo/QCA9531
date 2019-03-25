@@ -1,0 +1,288 @@
+#!/usr/bin/lua
+local json = require("luci.json")
+local util = require ("luci.util")
+require "luci.model.uci"
+local uci = luci.model.uci.cursor()
+local acom = require("andlinkcommon")
+
+--log 
+acom.log_file = "/tmp/tzandlinkreport.log"
+local D = acom.log_info 
+--log end
+
+--common
+local sleep = acom.sleep
+local split = acom.split
+local check_ip = acom.check_ip
+local get_mac = acom.get_mac
+local get_sn = acom.get_sn
+local get_broadcast = acom.get_broadcast
+local get_ip = acom.get_ip
+
+local g_mac = get_mac()
+local g_sn = get_sn(g_mac) --"C170710010116021863",
+
+function get_online_data()
+    uci:load("andlink")
+    local devid = uci:get("andlink","andlink","device_id")
+    if not devid or "" == devid then
+        return nil
+    end
+    --local sm=util.exec([[cat /tmp/sysinfo/board_name | tr -d "\n"]]) or ""
+    local sv=util.exec([[cat /etc/openwrt_version | tr -d "\n|\r"]])
+    local devmac = get_mac() --get_mac()
+    local apUplinkType="Ethernet"
+    local apcli0mac=util.exec([[iwinfo apcli0 i 2>/dev/null | grep "Access Point" | awk '{print $3}' | tr -d '\n']])
+    local isRadio5 = 0
+    if uci:get("wireless","wifi1") then
+        isRadio5 = 1
+    end
+    if "" ~= apcli0mac and "00:00:00:00:00:00" ~= apcli0mac then apUplinkType = "WLAN" end
+    
+    local d = {
+              deviceId = devid,
+              --deviceMac = devmac,
+              deviceType = uci:get("andlink","andlink","devicetype") or "30103",
+              --firmwareVersion = sm.."_"..sv,--util.exec([[grep hw_version= /etc/sysinfo.conf | awk -F= '{printf("%s",$2)}']]),
+              firmwareVersion = sv,--util.exec([[grep hw_version= /etc/sysinfo.conf | awk -F= '{printf("%s",$2)}']]),
+              softwareVersion = sv,--util.exec([[grep soft_version= /etc/sysinfo.conf | awk -F= '{printf("%s",$2)}']]),
+              ipAddress = get_ip(),
+              timestamp = os.time(),
+              XData = {
+                      deviceMac = devmac,
+                      deviceVendor = util.exec([[grep DEVICE_MANUFACTURER= /etc/device_info | awk -F= '{print $2}' | tr -d "\'|\n"]]),
+                      deviceModel = util.exec([[grep DEVICE_PRODUCT= /etc/device_info | awk -F= '{print $2}' | tr -d "\'|\n"]]),
+                      deviceSn = g_sn, --get_sn(devmac), --"C170710010116021863",
+                      apUplinkType = apUplinkType,
+                      radio5 = isRadio5,
+                      SyncCode = uci:get("andlink","andlink","sysc_code") or "0"
+              }
+    }
+    return d 
+end
+
+function search_gateway()
+    local count = 1 
+    local bcip = nil
+    local bc_cmd = nil
+    local gwip = nil
+    while not gwip or "" == gwip do
+        bcip = get_broadcast()
+        if not bcip then bcip = "255.255.255.255" end
+        --bc_cmd=string.format([[coap-broadcast coap://%s/qlink/searchgw -e '{"searchKey":"ANDLINK-DEVICE","andlinkVersion":"V3"}']],bcip)
+        bc_cmd=string.format([[coap-broadcast -e '{"searchKey":"ANDLINK-DEVICE","andlinkVersion":"V3"}' coap://%s/qlink/searchgw]],bcip)
+        D(bc_cmd)
+        gwip=util.exec(bc_cmd)
+        gwip=string.gsub(gwip,"\n","")
+        if check_ip(gwip) then
+            uci:load("andlink")
+            uci:set("andlink","andlink","gateway",gwip)
+            uci:commit("andlink")
+            D("get gateway ip:"..gwip)
+            break
+        else
+            --bc_cmd=string.format([[coap-broadcast coap://%s/qlink/searchgw -N -e '{"searchKey":"ANDLINK-DEVICE","andlinkVersion":"V3"}']],bcip)
+            bc_cmd=string.format([[coap-broadcast -N -e '{"searchKey":"ANDLINK-DEVICE","andlinkVersion":"V3"}' coap://%s/qlink/searchgw]],bcip)
+            D(bc_cmd)
+            os.execute(bc_cmd)
+            sleep(3)
+            uci:load("andlink")
+            gwip = uci:get("andlink","andlink","gateway")
+            if check_ip(gwip) then
+                D("get gateway ip:"..gwip)
+                break 
+            else
+                gwip = nil
+            end
+        end
+        count = count + 1
+        if count > 6 then break end
+        sleep(5)
+    end
+    return gwip
+end
+function coap_device_register(gwip)
+    if not gwip then return nil end
+    local recv_data=nil; 
+    local recv_t=nil; 
+    --device register 
+    --if not devid or "" == devid then
+        local dt=uci:get("andlink","andlink","devicetype") or "30103"
+        local ptoken=uci:get("andlink","andlink","producttoken") or "1ImttzrB9t3aShra"
+        local register_t={
+                  deviceMac=get_mac(),
+                  deviceType=dt,
+                  --productToken=util.exec(string.format([[echo -n %s | md5sum | awk '{print$1}' | tr -d "\n"]],dt)),
+                  productToken=ptoken,
+                  timestamp=os.time()
+              } 
+        local str_json = json.encode(register_t); 
+        --local reg_cmd=string.format([[coap-client coap://%s/device/inform/bootstrap -B 5 -m POST -e '%s']],gwip,str_json);
+        local reg_cmd=string.format([[coap-client -B 5 -m POST -e '%s' coap://%s/device/inform/bootstrap]],str_json,gwip);
+        D(reg_cmd)
+        recv_data=util.exec(reg_cmd); 
+        if recv_data and "" ~= recv_data then 
+            D(recv_data)
+            recv_t = json.decode(recv_data)
+            if recv_t and recv_t["deviceId"] and recv_t["deviceToken"] and recv_t["andlinkToken"] then
+                local devtk=recv_t["deviceToken"] or ""; 
+                local altk=recv_t["andlinkToken"] or ""; 
+                if ("0000000000000000" == devtk or 16 == string.len(devtk)) 
+                  and ("0000000000000000" == altk  or 16 == string.len(altk)) then 
+                    uci:load("andlink") 
+                    uci:set("andlink","andlink","device_id",recv_t["deviceId"]) 
+                    uci:set("andlink","andlink","device_token",devtk) 
+                    uci:set("andlink","andlink","andlink_token",altk) 
+                    uci:set("andlink","andlink","gateway_token",recv_t["gwToken"] or '') 
+                    uci:commit("andlink") 
+                    D("register ok") 
+                end
+            end
+        end
+    --end 
+end
+
+--online
+function coap_send_online(gwip)
+    if not gwip then return false end
+    local recv_data=nil
+    local recv_t=nil
+    local od = get_online_data()
+    if not od then
+        D("error:get online data failed!")
+        return false 
+    end
+    local str_od = json.encode(od)
+    --local online_cmd=string.format([[coap-client coap://%s/device/inform/boot -B 5 -m POST -e '%s']],gwip,str_od);
+    local online_cmd=string.format([[coap-client -B 5 -m POST -e '%s' coap://%s/device/inform/boot]],str_od,gwip);
+    D(online_cmd)
+    recv_data = util.exec(online_cmd) 
+    if recv_data and "" ~= recv_data then
+       D(recv_data)
+       recv_t = json.decode(recv_data) 
+       if recv_t and recv_t["timestamp"] and recv_t["heartBeatTime"] then
+           hb_time = tonumber(recv_t["heartBeatTime"])
+           uci:set("andlink","andlink","heartbeat_time",hb_time) 
+           uci:commit("andlink") 
+           return true 
+       end
+    end
+    return false
+end
+
+--sysupgrade event 
+function coap_sysupgrade_event(gwip)
+    if not gwip then return nil end
+    local recv_data=nil
+    local recv_t=nil
+    local ev=uci:get("andlink","event","preversion")
+    if ev and "" ~= ev then
+        local sv=util.exec([[cat /etc/openwrt_version | tr -d "\n|\r"]])
+        if "" ~= sv and ev ~= sv then
+            local evd={deviceId=devid,eventType="File",timestamp=os.time(),data={respCode=2001,respCont="File Upgrade Success"}}
+            --local ev_cmd = string.format([[coap-client coap://%s/device/inform/data -B 2 -m POST -e '%s']],gwip,json.encode(evd))
+            local ev_cmd = string.format([[coap-client -B 2 -m POST -e '%s' coap://%s/device/inform/data]],json.encode(evd),gwip)
+            D(ev_cmd)
+            recv_data = util.exec(ev_cmd) 
+            if recv_data and "" ~= recv_data then
+               D(recv_data)
+               recv_t = json.decode(recv_data) 
+               if recv_t and recv_t["respCode"] and 1 == tonumber(recv_t["respCode"]) then
+                   uci:delete("andlink","event","preversion")
+                   uci:commit("andlink")
+               end
+            end
+        end
+    end
+end
+
+--heartbeat 
+function coap_send_heartbeat(gwip)
+    if not gwip then return nil end
+    local recv_data=nil
+    local recv_t=nil
+    local str_hb = nil --json.encode(hb)
+    local hb_cmd = nil--string.format([[coap-client coap://%s/device/inform/heartbeat -m POST -e '%s']],gwip,str_hb);
+    local hb_count = 0
+    local hb_time = uci:get("andlink","andlink","heartbeat_time")
+    if not hb_time then return nil end
+    while true do
+        uci:load("andlink")
+        gwip = uci:get("andlink","andlink","gateway") --must get gateway addr agin
+        devid = uci:get("andlink","andlink","device_id") --must get device id again 
+        if not gwip or "" == gwip or not devid or "" == devid then 
+            D("device was unbound")
+            break
+        end
+        str_hb = json.encode({deviceId=devid})
+        --hb_cmd=string.format([[coap-client coap://%s/device/inform/heartbeat -B 2 -m POST -e '%s']],gwip,str_hb);
+        hb_cmd=string.format([[coap-client -B 2 -m POST -e '%s' coap://%s/device/inform/heartbeat]],str_hb,gwip);
+        D(hb_cmd)
+        recv_data = util.exec(hb_cmd)
+        recv_data = string.gsub(recv_data," ","")
+        if recv_data and "" ~= recv_data then
+            D(recv_data)
+            recv_t = json.decode(recv_data)
+            if not recv_t or 1 ~= tonumber(recv_t["respCode"]) then
+                if 10 < hb_count then 
+                    break
+                else
+                    hb_count = hb_count + 1
+                end
+            else
+                hb_count = 0
+            end
+        end
+        sleep(hb_time/1000)
+    end
+end
+
+function coap_report(gwip)
+    local devid=nil
+    local count = 5
+    uci:load("andlink")
+    devid = uci:get("andlink","andlink","device_id")
+    while 0 < count do
+        if 0 == os.execute("test -f /tmp/qlink.pid") then
+            break
+        end
+        --device register
+        if not devid or "" == devid then 
+            coap_device_register(gwip)
+            devid = uci:get("andlink","andlink","device_id")  
+        end
+        --online
+        if coap_send_online(gwip) then break end
+        devid = nil
+        count = count + 1
+        sleep(5)
+    end
+
+    --sysupgrade event 
+    if devid then
+        coap_sysupgrade_event(gwip)
+    end
+
+    --heart beat
+    if devid then
+        coap_send_heartbeat(gwip)
+    end
+end
+
+local gwip = nil
+while true do
+    if 0 ~= os.execute("test -f /tmp/qlink.pid") then
+        gwip = search_gateway()
+        if gwip then
+            --[[
+            local ifa = util.ubus("network.interface.lan","status")
+            if ifa and "dhcp" ~= ifa.proto then --router mode
+                os.execute("/bin/setdevmode mode=ap >/dev/null") --To ap mode if it's smart gateway.
+                sleep(10) --waiting for /etc/init.d/network restart
+            end
+            --]]
+            coap_report(gwip)
+        end
+    end
+    sleep(30)
+end

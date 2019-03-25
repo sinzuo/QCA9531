@@ -1,0 +1,1074 @@
+#!/usr/bin/lua
+local json = require("luci.json")
+local util = require ("luci.util")
+require "luci.model.uci"
+local uci = luci.model.uci.cursor()
+local acom = require("andlinkcommon")
+
+--log 
+acom.log_file = "/tmp/tzcoapserver.log"
+local D = acom.log_info 
+--log end
+
+--common
+local split = acom.split
+local getinfacestatus = acom.ubus_inface_status
+local get_up_ifname = acom.get_ifname
+--common end
+
+local andlk = "andlink"
+local wire  = "wireless"
+
+local g_wifi_device_2g="ra0" --/etc/config/wireless  device
+if uci:get(wire,"mt7603e") then
+    g_wifi_device_2g="mt7603e"   --/etc/config/wireless  device
+end
+local g_wifi_device_5g="mt7612e" --/etc/config/wireless  device
+local g_pref_iface_2g="ra"       --ifconfig
+local g_pref_iface_5g="rai"      --ifconfig
+local g_wifi_iface_2g=g_pref_iface_2g.."0"  --2.4G first interface
+local g_wifi_iface_5g=g_pref_iface_5g.."0"  --5G   first interface
+
+function usage()
+print([[usage:coap-resources-process [-l] [-p uri_path] [-d data] 
+       -l          display all of uri path
+       -p  path    uri path
+       -i  info    client info(ip and port,json code)
+       -d  data    request data
+examples:
+       coap-resources-process  -l
+       coap-resources-process  -p apdevice/control/WiFiSwitch -d '{"deviceId":"1","data":"1234"}'
+       ]])
+end
+
+function arg_parse(arg)
+local res=nil
+local i=1
+
+if 1 > #arg then
+    usage()
+end
+
+while i <= #arg do
+    if "-l" == arg[i] then
+       if not res then res = {} end
+       res["list"] = true
+       break
+    elseif "-p" == arg[i] and arg[i+1] and "-" ~= string.sub(arg[i+1],1,1) then
+       if not res then res = {} end
+       res["path"] = arg[i+1]
+       i = i + 1 
+    elseif "-i" == arg[i] and arg[i+1] and "-" ~= string.sub(arg[i+1],1,1) then
+       if not res then res = {} end
+       res["client"] = arg[i+1]
+       i = i + 1 
+    elseif "-d" == arg[i] and arg[i+1] and "-" ~= string.sub(arg[i+1],1,1) then
+       if not res then res = {} end
+       res["data"] = arg[i+1]
+       i = i + 1 
+    end 
+    i = i + 1 
+end
+return res
+end
+
+
+function coap_index()
+    print([[SZTozed's device,andlink server(CoAP Proto).]])
+end
+
+function search_ack(data,client)
+    local res = [[{"respCode":1000,"respCont":"Authorization failed"}]]
+    if data and client then
+        local d = json.decode(data); 
+        local c = json.decode(client); 
+        if d and c and d["searchAck"] and "ANDLINK-GW" == d["searchAck"] then
+            if c["ip"] then 
+                uci:load(andlk)
+                if not uci:get(andlk,"andlink") then
+                    uci:section(andlk,"andlink","andlink")
+                end
+                c["ip"]=string.gsub(c["ip"],"::ffff:","") --ipv6 map ipv4
+                uci:set(andlk,"andlink","gateway",c["ip"])
+                uci:commit(andlk)
+                res = [[{"respCode":1}]]
+            end
+        end
+    end
+    print(res)
+end
+
+function wifi_sync(data,client)
+    --local res = [[{"respCode":9999,"respCont":"Unkown Error"}]]
+    D(data)
+    local res = [[{"respCode":1}]]
+    local d = json.decode(data)
+    local devid = uci:get(andlk,"andlink","device_id") or ""
+    if d and d["deviceId"] and d["data"] and d["data"]["SyncCode"]
+      and d["data"]["Configurations"] and d["deviceId"] == devid then
+        local sc = uci:get(andlk,"andlink","sync_code") or ""
+        --if sc ~= d["data"]["SyncCode"] then
+        if 0 ~= os.execute("test -f /tmp/qlink.pid") then --qlink process,don't set wireless
+             local save_flag = false
+             local wifa="wifi-iface"
+             for k,c in pairs(d["data"]["Configurations"]) do
+                 if ("2.4G" == c["Radio"] or "5G" == c["Radio"])
+                   and c["SSID"] and "" ~= string.gsub(c["SSID"]," ","") then 
+                     repeat   
+                         if "CMCC-QLINK" == c["SSID"] and "None" ~= c["SecurityMode"] then
+                             break
+                         end
+                         local raname = g_wifi_device_2g 
+                         if "5G" == c["Radio"] then raname = g_wifi_device_5g end
+                         if not uci:get(wire,raname) then break end
+                         local i = tonumber(c["Index"]) or 1
+                         if 4 < i then i = 1 end  --max ssid nums = 4
+                         local count = 1
+                         local name = nil 
+                         uci:foreach(wire,wifa,function(s)
+                             local dev  = s["device"] or ""  
+                             local net  = s["network"] or ""
+                             local mode = s["mode"] or ""
+                             local ssid = s["ssid"] or ""
+                              
+                             if raname == dev and "lan" == net and "ap" == mode 
+                               and "tozed-zhongji" ~= ssid then
+                                if i == count then
+                                   name = s[".name"]
+                                else
+                                   count = count + 1 
+                                end
+                             end
+                         end)
+                         local disa = tonumber(c["Enable"])
+                         if 0 == disa then disa = 1 else disa = 0 end
+                         local enc = c["SecurityMode"]
+                         if "None" == enc or "none" == enc then
+                             enc = "none"
+                         elseif "WPA-Personal" == enc then
+                             enc = "psk"
+                         elseif "WPA2-Personal" == enc then
+                             enc = "psk2"
+                         else
+                             enc = "psk+psk2"
+                         end
+                         local hidd = tonumber(c["SSIDAdvertisementEnabled"])
+                         if 0 == hidd then hidd = 1 else hidd = 0 end 
+                         if not name then 
+                            uci:section(wire,wifa,nil,{device=raname,
+                                                       network="lan",
+                                                       mode="ap",
+                                                       ssid=c["SSID"],
+                                                       encryption=enc,
+                                                       key=c["Pwd"],
+                                                       maxassoc=tonumber(c["MaxAssociateNum"]),
+                                                       hidden=hidd,
+                                                       disabled=disa,
+                                                       })
+                         else
+                            uci:set(wire,name,"device",raname) 
+                            uci:set(wire,name,"ssid",c["SSID"]) 
+                            uci:set(wire,name,"encryption",enc) 
+                            uci:set(wire,name,"key",c["Pwd"] or "") 
+                            uci:set(wire,name,"maxassoc",c["MaxAssociateNum"] or 16)
+                            uci:set(wire,name,"hidden",hidd) 
+                            uci:set(wire,name,"disabled",disa) 
+                         end
+                         save_flag = true
+                     until true
+                 else
+                     uci:revert(wire)
+                     save_flag = false 
+                     res = [[{"respCode":1003,"respCont":"Invalid value"}]]
+                     break 
+                 end
+             end 
+             if save_flag then
+                 uci:set(andlk,"andlink","sync_code",d["data"]["SyncCode"]) 
+                 uci:commit(wire)
+                 uci:commit(andlk)
+                 res = [[{"respCode":1}]]
+                 os.execute([[wifi >/dev/null 2>&1 &]])
+             end
+        --end
+        end
+    else 
+        res = [[{"respCode":1002,"respCont":"Lock of argument"}]]
+    end 
+    print(res)
+end
+
+function wifi_switch(data,client)
+   local res = [[{"respCode":1}]]
+   local d = json.decode(data)
+   local devid = uci:get(andlk,"andlink","device_id") or ""
+   if d and d["deviceId"] and d["data"] and d["deviceId"] == devid
+     and d["data"]["Radio"] and d["data"]["Enable"] then
+       local radio = d["data"]["Radio"] 
+       local ena = tonumber(d["data"]["Enable"])
+       if ("all" == radio or "2.4G" == radio or "5G" == radio ) and ena then
+           local save_flag = false
+           local r2 = uci:get(wire,g_wifi_device_2g)
+           local r5 = uci:get(wire,g_wifi_device_5g)
+           if 0 == ena then ena = 1 else ena = 0 end
+           if r2 and ("all" == radio or "2.4G" == radio) then
+               local disa2 = tonumber(uci:get(wire,g_wifi_device_2g,"disabled")) or 0
+               if ena ~= disa2 then
+                   uci:set(wire,g_wifi_device_2g,"disabled",ena)
+                   save_flag = true 
+               end
+           end
+           if r5 and ( "all" == radio or "5G" == radio)then
+               local disa5 = tonumber(uci:get(wire,g_wifi_device_5g,"disabled")) or 0
+               if ena ~= disa5 then
+                   uci:set(wire,g_wifi_device_5g,"disabled",ena)
+                   save_flag = true 
+               end
+           end
+           if save_flag then
+               uci:commit(wire)
+               os.execute([[wifi >/dev/null 2>&1 &]])
+           end
+       else
+           res = [[{"respCode":1003,"respCont":"Invalid value"}]]
+       end 
+   else 
+       res = [[{"respCode":1002,"respCont":"Lock of argument"}]]
+   end 
+   print(res)
+end
+
+function radio_config(data,client)
+   local res = [[{"respCode":1}]]
+   local d = json.decode(data)
+   local devid = uci:get(andlk,"andlink","device_id") or ""
+   if d and d["deviceId"] and d["data"] and d["deviceId"] == devid
+     and d["data"]["Radio"] and d["data"]["TransmitPower"] then
+       local radio = d["data"]["Radio"] 
+       local power = tonumber(d["data"]["TransmitPower"])
+       if ("all" == radio or "2.4G" == radio or "5G" == radio ) and power then
+           local save_flag = false
+           local r2 = uci:get(wire,g_wifi_device_2g)
+           local r5 = uci:get(wire,g_wifi_device_5g)
+           if 0 > power then power = 0 - power end
+           if r2 and ("all" == radio or "2.4G" == radio) then
+               local txp2 = tonumber(uci:get(wire,g_wifi_device_2g,"txpower"))
+               if power ~= txp2 then
+                   uci:set(wire,g_wifi_device_2g,"txpower",power)
+                   save_flag = true 
+               end
+           end
+           if r5 and ( "all" == radio or "5G" == radio)then
+               local txp5 = tonumber(uci:get(wire,g_wifi_device_5g,"txpower"))
+               if power ~= txp5 then
+                   uci:set(wire,g_wifi_device_5g,"txpower",power)
+                   save_flag = true 
+               end
+           end
+           if save_flag then
+               uci:commit(wire)
+               os.execute([[wifi >/dev/null 2>&1 &]])
+           end
+       else
+           res = [[{"respCode":1003,"respCont":"Invalid value"}]]
+       end 
+   else 
+       res = [[{"respCode":1002,"respCont":"Lock of argument"}]]
+   end 
+   print(res)
+end
+
+function wps(data,client)
+   local res = [[{"respCode":1}]]
+   local d = json.decode(data)
+   local devid = uci:get(andlk,"andlink","device_id") or ""
+   if d and d["deviceId"] and d["data"] and d["deviceId"] == devid
+     and d["data"]["Radio"] then
+       --wps action
+       local radio = d["data"]["Radio"] 
+       local ssid = nil
+       local wps_ifs = "" 
+       if ("all" == radio or "2.4G" == radio or "5G" == radio ) then
+           local ifs_str = util.exec([[ls /sys/devices/virtual/net/ | grep ra | tr -s '\n' ' ']])
+           local ifs_t = split(ifs_str," ")
+           local r2 = uci:get(wire,g_wifi_device_2g)
+           local r5 = uci:get(wire,g_wifi_device_5g)
+           if r2 and ("all" == radio or "2.4G" == radio) then
+               for k,v in pairs(ifs_t)do
+                   if not string.find(v,g_pref_iface_5g) then --2.4G
+                       ssid = util.exec(string.format([[iwconfig %s 2>/dev/null | grep ESSID | awk -F: '{print $2}' | tr -d "\"|\n"]],v))
+                       ssid = string.gsub(ssid," ","")
+                       if "tozed-zhongji" ~= ssid and "" ~= ssid then
+                       --os.execute(string.format([[iwpriv %s set WscConfMode=7 >/dev/null 2>&1]],v))
+                       --os.execute(string.format([[iwpriv %s set WscMode=2     >/dev/null 2>&1]],v))
+                       --os.execute(string.format([[iwpriv %s set WscGetConf=1  >/dev/null 2>&1]],v))
+                           wps_ifs = wps_ifs..v.." "
+                           break
+                       end
+                   end
+               end
+           end 
+           if r5 and ("all" == radio or "5G" == radio) then
+               for k,v in pairs(ifs_t)do
+                   if string.find(v,g_pref_iface_5g) then --5G
+                       --os.execute(string.format([[iwpriv %s set WscConfMode=7 >/dev/null 2>&1]],v))
+                       --os.execute(string.format([[iwpriv %s set WscMode=2     >/dev/null 2>&1]],v))
+                       --os.execute(string.format([[iwpriv %s set WscGetConf=1  >/dev/null 2>&1]],v))
+                       wps_ifs = wps_ifs..v.." "
+                       break 
+                   end
+               end
+           end
+           if wps_ifs and "" ~= wps_ifs then
+               os.execute(string.format([[wps_pbc %s >/dev/null 2>&1 &]],wps_ifs))
+           end
+       else
+           res = [[{"respCode":1003,"respCont":"Invalid value"}]]
+       end
+   else
+       res = [[{"respCode":1002,"respCont":"Lock of argument"}]]
+   end
+   print(res)
+end
+
+function mac_filter_wifi(data,client)
+   local res = [[{"respCode":1}]]
+   local d = json.decode(data)
+   local devid = uci:get(andlk,"andlink","device_id") or ""
+   if d and d["deviceId"] and d["data"] and d["deviceId"] == devid 
+     and d["data"]["MacFilterEnable"] and d["data"]["MacFilterPolicy"]
+     and d["data"]["MacFilterEntries"] then
+       local save_flag = false
+       local r2 = uci:get(wire,g_wifi_device_2g)
+       local r5 = uci:get(wire,g_wifi_device_5g)
+       local ena = tonumber(d["data"]["MacFilterEnable"])
+       local pol = tonumber(d["data"]["MacFilterPolicy"])
+       repeat
+           local wpol = ""
+           if 0 == pol then
+               wpol = "deny"
+           elseif 1 == pol then
+               wpol = "allow"
+           else 
+               res = [[{"respCode":1003,"respCont":"Invalid value"}]]
+               break
+           end 
+           local es = d["data"]["MacFilterEntries"] 
+           if 1 == ena then
+               local est = split(es,",") 
+               local ml = nil
+               local m = nil
+               for k,v in pairs(est) do
+                   m = string.match(v,"^[%x][%x]:[%x][%x]:[%x][%x]:[%x][%x]:[%x][%x]:[%x][%x]")
+                   if m then
+                       if not ml then ml = {} end
+                       table.insert(ml,m) 
+                   end
+               end
+               if r2 then 
+                   uci:delete(wire,g_wifi_device_2g,"maclist")
+                   uci:set(wire,g_wifi_device_2g,"macpolicy",wpol) 
+                   if ml then uci:set_list(wire,g_wifi_device_2g,"maclist",ml) end
+                   save_flag = true
+               end 
+               if r5 then 
+                   uci:delete(wire,g_wifi_device_5g,"maclist")
+                   uci:set(wire,g_wifi_device_5g,"macpolicy",wpol) 
+                   if ml then uci:set_list(wire,g_wifi_device_5g,"maclist",ml) end
+                   save_flag = true
+               end 
+               if not uci:get(andlk,"MacFilter") then
+                   uci:section(andlk,"MacFilter","MacFilter")
+               end
+               uci:set(andlk,"MacFilter","MacFilterEnable",1)
+               uci:set(andlk,"MacFilter","MacFilterPolicy",pol)
+               uci:set(andlk,"MacFilter","MacFilterEntries",es)
+               uci:commit(andlk) 
+           elseif 0 == ena then
+               if r2 then 
+                   uci:set(wire,g_wifi_device_2g,"macpolicy","") 
+                   uci:delete(wire,g_wifi_device_2g,"maclist")
+                   save_flag = true
+               end
+               if r5 then 
+                   uci:set(wire,g_wifi_device_5g,"macpolicy","") 
+                   uci:delete(wire,g_wifi_device_5g,"maclist")
+                   save_flag = true
+               end
+               if not uci:get(andlk,"MacFilter") then
+                   uci:section(andlk,"MacFilter","MacFilter")
+               end
+               uci:set(andlk,"MacFilter","MacFilterEnable",0)
+               uci:set(andlk,"MacFilter","MacFilterPolicy",pol)
+               uci:set(andlk,"MacFilter","MacFilterEntries",es)
+               uci:commit(andlk) 
+           else 
+               res = [[{"respCode":1003,"respCont":"Invalid value"}]]
+               break
+           end
+       until true
+       if save_flag then 
+           uci:commit(wire) 
+           os.execute([[wifi >/dev/null 2>&1 &]])
+       end
+   else
+       res = [[{"respCode":1002,"respCont":"Lock of argument"}]]
+   end
+   print(res)
+end
+
+function mac_filter(data,client)
+   local res = [[{"respCode":1}]]
+   local d = json.decode(data)
+   local devid = uci:get(andlk,"andlink","device_id") or ""
+   if d and d["deviceId"] and d["data"] and d["deviceId"] == devid
+     and d["data"]["MacFilterEnable"] and d["data"]["MacFilterPolicy"]
+     and d["data"]["MacFilterEntries"] then
+       local save_flag = false
+       local ena = tonumber(d["data"]["MacFilterEnable"])
+       local pol = tonumber(d["data"]["MacFilterPolicy"])
+       repeat
+           if 1 == ena and 0 ~= pol and 1 ~= pol then
+               res = [[{"respCode":1003,"respCont":"Invalid value"}]]
+               break
+           end
+           local es = d["data"]["MacFilterEntries"]
+           if 1 == ena then
+               local est = split(es,",")
+               local ml = nil
+               local m = nil
+               local ismac = true
+               for _,v in pairs(est) do
+                   m = string.match(v,"^[%x][%x]:[%x][%x]:[%x][%x]:[%x][%x]:[%x][%x]:[%x][%x]")
+                   if not m then
+                       ismac = false
+                       break
+                   end
+               end
+               if not ismac then
+                   res = [[{"respCode":1003,"respCont":"Invalid value"}]]
+                   break
+               end
+               if not uci:get(andlk,"MacFilter") then
+                   uci:section(andlk,"MacFilter","MacFilter")
+               end
+               uci:set(andlk,"MacFilter","MacFilterEnable",1)
+               uci:set(andlk,"MacFilter","MacFilterPolicy",pol)
+               uci:set(andlk,"MacFilter","MacFilterEntries",es)
+               uci:commit(andlk)
+               save_flag = true
+           elseif 0 == ena then
+               if not uci:get(andlk,"MacFilter") then
+                   uci:section(andlk,"MacFilter","MacFilter")
+               end
+               uci:set(andlk,"MacFilter","MacFilterEnable",0)
+               uci:set(andlk,"MacFilter","MacFilterPolicy",pol)
+               uci:set(andlk,"MacFilter","MacFilterEntries",es)
+               uci:commit(andlk)
+               save_flag = true
+           else
+               res = [[{"respCode":1003,"respCont":"Invalid value"}]]
+               break
+           end
+       until true
+       if save_flag then
+           os.execute([[andlink-macfilter]])
+       end
+   else
+       res = [[{"respCode":1002,"respCont":"Lock of argument"}]]
+   end
+   print(res)
+end
+
+function reboot(data,client)
+   local res = [[{"respCode":1}]]
+   local d = json.decode(data)
+   local devid = uci:get(andlk,"andlink","device_id") or ""
+   if d and d["deviceId"] and d["data"] and d["deviceId"] == devid
+     and d["data"]["ControlType"] then
+       local save_flag = false
+       local r2 = uci:get(wire,g_wifi_device_2g)
+       local r5 = uci:get(wire,g_wifi_device_5g)
+       local ct = d["data"]["ControlType"]
+       if "Reboot" == ct then
+           os.execute([[reboot -d 3 >/dev/null 2>&1 &]])
+       elseif "2.4GChanReSelect" == ct then
+           if r2 then 
+               uci:set(wire,g_wifi_device_2g,"channel","auto") 
+               save_flag = true
+           end
+       elseif "5GChanReSelect" == ct then
+           if r5 then 
+               uci:set(wire,g_wifi_device_5g,"channel","auto") 
+               save_flag = true
+           end
+       else
+           res = [[{"respCode":1003,"respCont":"Invalid value"}]]
+       end 
+       if save_flag then 
+           uci:commit(wire) 
+           os.execute([[wifi >/dev/null 2>&1 &]])
+       end
+   else
+       res = [[{"respCode":1002,"respCont":"Lock of argument"}]]
+   end
+   print(res)
+end
+
+function led_control(data,client)
+   local res = [[{"respCode":1}]]
+   local d = json.decode(data)
+   local devid = uci:get(andlk,"andlink","device_id") or ""
+   if d and d["deviceId"] and d["data"] and d["deviceId"] == devid
+     and d["data"]["LEDOnOff"] then
+       --LEDOnOff
+       local led = tonumber(d["data"]["LEDOnOff"])
+       if 0 == led or 1 == led then
+           local ledcmd = [[test -f /sys/class/leds/%s/brightness && echo %s >/sys/class/leds/%s/brightness]]
+           os.execute(string.format(ledcmd,"sys",led,"sys"))
+           os.execute(string.format(ledcmd,"wifi",led,"wifi"))
+       else
+           res = [[{"respCode":1003,"respCont":"Invalid value"}]]
+       end
+   else
+       res = [[{"respCode":1002,"respCont":"Lock of argument"}]]
+   end
+   print(res)
+end
+
+function roaming_config(data,client)
+   local res = [[{"respCode":1}]]
+   local d = json.decode(data)
+   local devid = uci:get(andlk,"andlink","device_id") or ""
+   if d and d["deviceId"] and d["data"] and d["deviceId"] == devid
+     and d["data"]["RoamingSwitch"] then
+       --RoamingSwitch 
+       local save_flag = false
+       local ena = tonumber(d["data"]["RoamingSwitch"])
+       local r2 = uci:get(wire,g_wifi_device_2g)
+       local r5 = uci:get(wire,g_wifi_device_5g)
+       if 1 == ena then --on
+           if r2 and d["data"]["LowRSSI2.4G"] then  
+               local low2 = math.abs(tonumber(d["data"]["LowRSSI2.4G"]))
+               uci:set(wire,g_wifi_device_2g,"KickStaRssiLow",low2)
+               save_flag = true 
+           end
+           if r5 and d["data"]["LowRSSI5G"] then  
+               local low5 = math.abs(tonumber(d["data"]["LowRSSI5G"]))
+               uci:set(wire,g_wifi_device_5g,"KickStaRssiLow",low5)
+               save_flag = true 
+           end
+       else  --off
+           if r2 then
+               uci:set(wire,g_wifi_device_2g,"KickStaRssiLow","")
+               save_flag = true 
+           end
+           if r5 then  
+               uci:set(wire,g_wifi_device_5g,"KickStaRssiLow","")
+               save_flag = true 
+           end
+       end
+       if save_flag then 
+           uci:commit(wire) 
+           os.execute([[wifi >/dev/null 2>&1 &]])
+       end
+   else
+       res = [[{"respCode":1002,"respCont":"Lock of argument"}]]
+   end
+   print(res)
+end
+
+function ap_config_info(data,client)
+    local res = [[{"respCode":1001,"respCont":"Invalid argument"}]]
+    local al = andlk 
+    local devid = uci:get(al,"andlink","device_id") or ""
+    if "" ~= devid then
+        local led = util.exec([[test -f /sys/class/leds/wifi/brightness && cat /sys/class/leds/wifi/brightness | tr -d "\n|\r"]])
+        led = tonumber(led) or 1
+        if 1 < led then led = 1 end
+        local d={
+        hardwareVersion = "1.0.1",--util.exec([[grep hw_version= /etc/sysinfo.conf | awk -F= '{printf("%s",$2)}']]),
+        softwareVersion = util.exec([[cat /etc/openwrt_version | tr -d "\n|\r"]]),--util.exec([[grep soft_version= /etc/sysinfo.conf | awk -F= '{printf("%s",$2)}']]),
+        Uptime = util.exec([[awk '{printf("%d",$1)}' /proc/uptime]]),
+        MacFilterEnable = tonumber(uci:get(al,"MacFilter","MacFilterEnable")) or 0,
+        MacFilterPolicy = tonumber(uci:get(al,"MacFilter","MacFilterPolicy")) or 0,
+        MacFilterEntries = uci:get(al,"MacFilter","MacFilterEntries") or "",
+        LEDOnOff = led,
+        RoamingSwitch = 0,
+        SyncCode = uci:get(al,"andlink","sync_code") or "0",
+        }
+        local rs = {}
+        local r2 = uci:get(wire,g_wifi_device_2g)
+        local r5 = uci:get(wire,g_wifi_device_5g)
+        if r2 then 
+            local low2= uci:get(wire,g_wifi_device_2g,"KickStaRssiLow")
+            if low2 then
+                low2 = tonumber(low2) or 88
+                d["RoamingSwitch"] = 1
+                d["LowRSSI2.4G"] = -low2 
+            end
+            local disa2 = tonumber(uci:get(wire,g_wifi_device_2g,"disabled")) or 0
+            if 0 == disa2 then disa2 = 1 else disa2 = 0 end
+            local v2 = {
+                Radio = "2.4G",
+                Enable = disa2, 
+                TransmitPower = uci:get(wire,g_wifi_device_2g,"txpower") or "100",
+                Channel = tonumber(util.exec(string.format([[iwconfig %s 2>&1 | grep Channel= | awk '{print $2}' | tr -d "Channel="]],g_wifi_iface_2g))),
+            }
+            table.insert(rs,v2)
+        end
+        if r5 then 
+            local low5= uci:get(wire,g_wifi_device_5g,"KickStaRssiLow")
+            if low5 then
+                low5 = tonumber(low5) or 88
+                d["RoamingSwitch"] = 1
+                d["LowRSSI5G"] = -low5 
+            end
+            local disa5 = tonumber(uci:get(wire,g_wifi_device_5g,"disabled")) or 0
+            if 0 == disa5 then disa2 = 1 else disa5 = 0 end
+            local v5 = {
+                Radio = "5G",
+                Enable = disa2, 
+                TransmitPower = uci:get(wire,g_wifi_device_5g,"txpower") or "100",
+                Channel = tonumber(util.exec(string.format([[iwconfig %s 2>&1 | grep Channel= | awk '{print $2}' | tr -d "Channel="]],g_wifi_iface_5g))),
+            }
+            table.insert(rs,v5)
+        end
+        local cs = {} 
+        if r2 or r5 then
+            local i2 = 1
+            local i5 = 1
+            local disa = 0 
+            uci:foreach(wire,"wifi-iface",function(s)
+                local dev  = s["device"] or ""  
+                local net  = s["network"] or ""
+                local mode = s["mode"] or ""
+                local ssid = s["ssid"] or ""
+                 
+                if (g_wifi_device_2g == dev or g_wifi_device_5g == dev) and "lan" == net
+                  and "ap" == mode and "tozed-zhongji" ~= ssid then
+                    local v = {}
+                    
+                    disa = tonumber(uci:get(wire,dev,"disabled")) or 0
+                    v["Enable"] = tonumber(s["disabled"]) or 0
+                    if 0 == v["Enable"] and 0 == disa then
+                        v["Enable"] = 1 
+                    else 
+                        v["Enable"] = 0 
+                    end
+                    v["SSIDAdvertisementEnabled"] = tonumber(s["hidden"]) or 0
+                    if 0 == v["SSIDAdvertisementEnabled"] then 
+                        v["SSIDAdvertisementEnabled"] = 1 
+                    else 
+                        v["SSIDAdvertisementEnabled"] = 0 
+                    end
+                    v["SSID"] = s["ssid"] 
+                    v["Pwd"] = s["key"] or ""
+                    v["MaxAssociateNum"] = tonumber(s["maxassoc"]) or 10
+                    if "none" == s["encryption"] then
+                        v["SecurityMode"] = "None"
+                    elseif "psk" == s["encryption"] then
+                        v["SecurityMode"] = "WPA-Personal"
+                    elseif "psk2" == s["encryption"] then
+                        v["SecurityMode"] = "WPA2-Personal"
+                    else
+                        v["SecurityMode"] = "MIXED-WPAPSK2"
+                    end
+                    if g_wifi_device_2g == dev then
+                        v["Radio"] = "2.4G" 
+                        v["Index"] = i2  
+                        i2 = i2 + 1
+                    else 
+                        v["Radio"] = "5G" 
+                        v["Index"] = i5 
+                        i5 = i5 + 1
+                    end
+                    table.insert(cs,v)
+                end
+            end)
+        end --if r2 or r5 
+        d["Radios"] = rs
+        d["Configurations"] = cs
+        res = json.encode({deviceId=devid,data=d})
+    end --if devid
+    D(res)
+    print(res)
+end
+
+function uplink_status(data,client)
+    local res = [[{"respCode":1001,"respCont":"Invalid argument"}]]
+    local devid = uci:get(andlk,"andlink","device_id") or ""
+    if "" ~= devid then
+        local d = {
+            UplinkType="Ethernet",
+            RxRate="100",
+            TxRate="100",
+        } 
+        local apcli0mac=util.exec([[iwinfo apcli0 i | grep "Access Point" | awk '{print $3}' | tr -d '\n']])
+        if "00:00:00:00:00:00" ~= apcli0mac then --sta mode
+            d["UplinkType"]="WLAN"
+            d["Radio"]="2.4G"
+            local apinfo=util.exec([[iwinfo apcli0 i | grep -E "ESSID|Access Point|Bit Rate|Mode: Client" | tr -d '\n' | awk '{print $3" "$6" "$10" "$15}']])
+            local ap=split(apinfo," ")
+            d["SSID"] = string.gsub(ap[1],"\"","")
+            d["Channel"] = tonumber(ap[3])
+            d["RxRate"] = string.format("%d",ap[4])
+            d["TxRate"] = string.format("%d",ap[4])
+            local rssi=util.exec([[iwpriv apcli0 stat | grep RSSI | awk '{print $4}' | tr -d '\n']])
+            d["Noise"] = "-95" 
+            d["RSSI"] = rssi
+            d["SNR"] = tostring(tonumber(rssi)+95)
+        end
+        res = json.encode({deviceId=devid,data=d})
+    end
+    print(res)
+end
+
+function sta_info(data,client)
+    local res = [[{"respCode":1001,"respCont":"Invalid argument"}]]
+    local devid = uci:get(andlk,"andlink","device_id") or ""
+    if "" ~= devid then
+        local sta = {}
+        local ifs_str = util.exec([[ls /sys/devices/virtual/net/ | grep ra | tr -s '\n' ' ']])
+        local ifs_t = split(ifs_str," ")
+        local wtype, i, ssid="2.4G", 1, nil
+        for _,v in pairs(ifs_t) do
+            repeat
+                local is_ra = string.find(v,g_pref_iface_2g)
+                if not is_ra then break end
+                if string.find(v,g_pref_iface_5g) then wtype="5G" else wtype="2.4G" end
+                ssid = util.exec(string.format([[iwconfig %s 2>/dev/null | grep ESSID | awk -F: '{print $2}' | tr -d "\"|\n"]],v))
+                ssid = string.gsub(ssid," ","")
+                if "tozed-zhongji" == ssid or "" == ssid then break end
+                local ifn = v                                                       
+                local cmd = "iwinfo "..ifn.." assoclist | grep -v \'^$\'"
+                local fd = io.popen(cmd, "r")                                                      
+                local row = nil                                                                     
+                local mac = nil                                                                     
+                local uptime,dbm,rx,tx =nil,nil,nil,nil
+                if fd then                                                                          
+                    while true do                                                                   
+                        local line = nil                                                            
+                        line = fd:read("*l")                                                        
+                        if not line or #line==0 then break end                                      
+                        if 1 == i then
+                            row=split(line," ")                                                         
+                            mac = string.upper(row[1])
+                            dbm = row[2]
+                            uptime = tonumber(row[9]) or 600000
+                        end
+                        if 2 == i then
+                            row=split(line," ")
+                            rx = row[2]
+                        end
+                        if 3 == i then
+                            row=split(line," ")
+                            tx = row[2]
+                            local cli = {
+                                        MacAddress=mac,
+                                        VMacAddress=mac,
+                                        UpTime=(uptime/1000).."",
+                                        RSSI=dbm,
+                                        Radio=wtype,
+                                        SSID=ssid,
+                                        RxRate=string.format("%d",rx),
+                                        TxRate=string.format("%d",tx),}
+                            table.insert(sta,cli)
+                            i = 0
+                        end
+                        i = i + 1
+                    end
+                fd:close()
+                end
+            until true
+        end 
+        res = json.encode({deviceId=devid,data={Devices=sta}})
+    end
+    print(res)
+end
+function wifi_stats(data,client)
+    local res = [[{"respCode":1001,"respCont":"Invalid argument"}]]
+    local devid = uci:get(andlk,"andlink","device_id") or ""
+    if "" ~= devid then
+        local sts = {}
+        local ifs_str = util.exec([[ls /sys/devices/virtual/net/ | grep ra | tr -s '\n' ' ']])
+        local ifs_t = split(ifs_str," ")
+        local wtype, i, ssid="2.4G", 1, nil
+        local i2, i5 = 1, 1
+        for _,v in pairs(ifs_t) do                                        
+            repeat
+                local is_ra = string.find(v,g_pref_iface_2g)
+                if not is_ra then break end
+                if string.find(v,g_pref_iface_5g) then wtype="5G" else wtype="2.4G" end
+                ssid = util.exec(string.format([[iwconfig %s 2>/dev/null | grep ESSID | awk -F: '{print $2}' | tr -d "\"|\n"]],v))
+                ssid = string.gsub(ssid," ","")
+                if "tozed-zhongji" == ssid or "" == ssid then break end
+                local cmd = string.format([[ifconfig %s | grep -E "packets|bytes"]],v) 
+                local fd = io.popen(cmd, "r")                                                      
+                local row = nil                                                                     
+                local rxp,rxe,rxd,rxb,txp,txe,txd,txb = 0,0,0,0,0,0,0,0
+                if fd then
+                    i = 1
+                    while true do                                                                   
+                        local line = nil                                                            
+                        line = fd:read("*l")                                                        
+                        if not line or #line==0 then break end                                      
+                        row = split(line," ") 
+                        if 1 == i then
+                            rxp = tonumber(string.match(row[2],":(%d+)")) or 0
+                            rxe = tonumber(string.match(row[3],":(%d+)")) or 0
+                            rxd = tonumber(string.match(row[4],":(%d+)")) or 0
+                            i = i + 1
+                        elseif 2 == i then
+                            txp = tonumber(string.match(row[2],":(%d+)")) or 0
+                            txe = tonumber(string.match(row[3],":(%d+)")) or 0
+                            txd = tonumber(string.match(row[4],":(%d+)")) or 0
+                            i = i + 1
+                        elseif 3 == i then
+                            rxb = tonumber(string.match(row[2],":(%d+)")) or 0
+                            txb = tonumber(string.match(row[6],":(%d+)")) or 0
+                            local index = 1
+                            if "2.4G" == wtype then 
+                                index = i2 
+                                i2 = i2 + 1 
+                            else 
+                                index = i5 
+                                i5 = i5 + 1 
+                            end
+                            local st = {
+                                Radio = wtype, 
+                                Index = index, 
+                                SSID = ssid,
+                                TotalBytesSent = txb,
+                                TotalBytesRecevied = rxb,
+                                TotalPacketsSent = txp,
+                                TotalPacketsRecevied = rxp,
+                                ErrorSent = txe,
+                                ErrorRecevied = rxe,
+                                DiscardPacketsSent = txd,
+                                DiscardPacketsRecevied = rxd,
+                            } 
+                            table.insert(sts,st)
+                            break
+                        end 
+                    end
+                    fd:close()
+                end
+            until true
+        end 
+        res = json.encode({deviceId=devid,data={Status=sts}})
+    end
+    print(res)
+end
+
+function unbind(data,client)
+   local res = [[{"respCode":1}]]
+   local d = json.decode(data)
+   local devid = uci:get(andlk,"andlink","device_id") or ""
+   if d and d["deviceId"] and d["deviceId"] == devid then
+       uci:set(andlk,"andlink","gateway","") 
+       uci:set(andlk,"andlink","device_id","") 
+       uci:set(andlk,"andlink","sync_code","") 
+       uci:set(andlk,"andlink","device_token","") 
+       uci:set(andlk,"andlink","andlink_token","") 
+       uci:set(andlk,"andlink","gateway_token","") 
+       uci:delete(andlk,"MacFilter")
+       uci:commit(andlk)
+   else
+       res = [[{"respCode":1001,"respCont":"Invalid argument"}]]
+   end
+   print(res)
+end
+
+function file_process(data,client)
+   local res = [[{"respCode":0}]]
+   D(data)
+   D(client)
+   local d = json.decode(data)
+   local c = json.decode(client)
+   local devid = uci:get(andlk,"andlink","device_id") or ""
+   if d and d["deviceId"] and d["deviceId"] == devid 
+     and d["fileMode"] and d["fileType"] and d["fileUrl"] then
+       --res = [[{"respCode":0,"respCont":"Received Success"}]]
+       local fm,ft,fu,dm = d["fileMode"], d["fileType"], d["fileUrl"], d["downMode"]
+       local cm = require("andlinkcommon")
+       repeat
+           if "" == string.gsub(fm," ","") or ("DOWN" ~= fm and "UP" ~= fm )
+             or "" == string.gsub(ft," ","") 
+             or ("FIRM" ~= ft and "APP" ~= ft and "LOG" ~= ft and "CFG" ~= ft)
+             or "" == string.gsub(fu," ","") or "" == string.gsub(dm," ","") then 
+               res = [[{"respCode":1003,"respCont":"Invalid value"}]]
+               break 
+           end
+           --sysupgrade
+           if "FIRM" == ft and "DOWN" == fm then
+               D("sysupgrade:"..fu)
+               local code = nil
+               local file_size = nil
+               local is_ssl = string.find(fu,"^https:")
+               if is_ssl then
+                   code, file_size = cm.get_filesize_ssl(fu)
+               else
+                   code, file_size = cm.get_urlfile_size(fu)
+               end
+               if not code or 200 ~= code or not file_size or 0 >= file_size + 0 then
+                   res = [[{"respCode":1003,"respCont":"Invalid value"}]]
+                   break
+               else
+                   local sysupcmd=string.format([[andlink-sysupgrade -u %s -a %s >/dev/null 2>&1 &]],fu,c["ip"])
+                   D(sysupcmd)
+                   os.execute(sysupcmd)
+                   local sv=util.exec([[cat /etc/openwrt_version | tr -d "\n|\r"]])
+                   if not uci:get(andlk,"event") then
+                       uci:section(andlk,"event","event")
+                   end
+                   uci:set(andlk,"event","preversion",sv)
+                   uci:commit(andlk)
+               end
+           end
+       until true
+   else
+       res = [[{"respCode":1002,"respCont":"Lock of argument"}]]
+   end
+   print(res)
+end
+
+function data_process(data,client)
+   local res = [[{"respCode":1000,"respCont":"Authorization failed"}]] 
+   D(data)
+   D(client)
+   local d = json.decode(data)
+   local c = json.decode(client)
+   local devid = uci:get(andlk,"andlink","device_id") or ""
+   if d and d["deviceId"] and d["deviceId"] == devid then
+       --local sm=util.exec([[cat /tmp/sysinfo/board_name | tr -d "\n"]]) or ""
+       local sv=util.exec([[cat /etc/openwrt_version | tr -d "\n|\r"]])
+       local ps={}
+       local sd = {
+                --firmware = sm.."_"..sv,
+                firmware = sv,
+                softVersion = sv,
+       }
+       if d["data"] and d["data"]["paramCodes"] then
+           for k,v in pairs(d["data"]["paramCodes"]) do
+               local p = {paramCode=v["paramCode"],paramValue=sd[v["paramCode"]]} 
+               table.insert(ps,p)
+           end
+       else
+           for k,v in pairs(sd) do
+               local p = {paramCode=k,paramValue=v} 
+               table.insert(ps,p)
+           end
+       end
+       res = json.encode({deviceId=devid,data={params=ps}})
+   end
+   print(res)
+end
+
+function control_process(data,client)
+   local res = [[{"respCode":1}]]
+   D(data)
+   D(client)
+   local d = json.decode(data)
+   local c = json.decode(client)
+   local devid = uci:get(andlk,"andlink","device_id") or ""
+   if d and d["deviceId"] and d["deviceId"] == devid then
+       if d["data"] and d["data"]["params"] then
+           local pc = {}
+           for k,v in pairs(d["data"]["params"]) do
+               local p = {paramIndex=v["paramIndex"],paramValue=v["paramValue"]} 
+               pc[v["paramCode"]] = p
+           end
+           local flag = false
+           repeat
+           if pc["SystemControl"] then
+               local sc = pc["SystemControl"]
+               if "Reboot" == sc["paramValue"] then
+                   os.execute([[reboot -d 3 >/dev/null 2>&1 &]])
+                   D("Reboot")
+                   flag = true 
+                   break
+               elseif "Reset" == sc["paramValue"] then
+                   os.execute([[jffs2reset -y >/dev/null 2>&1 && reboot -d 4 &]]) 
+                   D("Reset")
+                   flag = true 
+                   break
+               end
+           end
+           until true
+           if not flag then 
+               res = [[{"respCode":1004,"respCont":"Invalid command"}]]
+           end
+       else
+           res = [[{"respCode":1002,"respCont":"Lock of argument"}]]
+       end
+   else
+       res = [[{"respCode":1000,"respCont":"Authorization failed"}]] 
+   end
+   print(res)
+end
+
+--qlink callback
+function ReciveInternetChannelCallback(data,client)
+    local res = [[{"relutl":1}]]
+    D(data)
+    local d=json.decode(data)
+    if d and d["SSID"] and d["password"] and d["encrypt"] and d["channel"] then
+        local cmd = string.format([[/usr/sbin/andlink-qlink -s '%s' &]],data)
+        os.execute(cmd)
+    else
+        res = [[{"relutl":0}]]
+    end
+    print(res)
+end
+
+--
+local hnd={
+    {path="",                                  method="GET", aescbc=1,fun=coap_index},
+    {path="qlink/searchack",                   method="POST",aescbc=1,fun=search_ack},
+    {path="apdevice/control/WiFiParameterSync",method="POST",aescbc=1,fun=wifi_sync},
+    {path="apdevice/control/WiFiSwitch",       method="POST",asecbc=1,fun=wifi_switch},
+    {path="apdevice/control/RadioConfig",      method="POST",asecbc=1,fun=radio_config},
+    {path="apdevice/control/WPS",              method="POST",asecbc=1,fun=wps},
+    {path="apdevice/control/MacFilter",        method="POST",asecbc=1,fun=mac_filter_wifi},
+    {path="apdevice/control/Reboot",           method="POST",asecbc=1,fun=reboot},
+    {path="apdevice/control/LEDControl",       method="POST",asecbc=1,fun=led_control},
+    {path="apdevice/control/RoamingConfig",    method="POST",asecbc=1,fun=roaming_config},
+    {path="apdevice/query/ApConfigInfo",       method="GET", asecbc=1,fun=ap_config_info},
+    {path="apdevice/query/UplinkStatus",       method="GET", asecbc=1,fun=uplink_status},
+    {path="apdevice/query/STAInfo",            method="GET", asecbc=1,fun=sta_info},
+    {path="apdevice/query/WiFiStats",          method="GET", asecbc=1,fun=wifi_stats},
+    {path="device/command/unbind",             method="POST",asecbc=1,fun=unbind},
+    {path="device/command/file",               method="POST",asecbc=1,fun=file_process},
+    {path="device/command/data",               method="POST",asecbc=1,fun=data_process},
+    {path="device/command/control",            method="POST",asecbc=1,fun=control_process},
+    --{path="qlink/netinfo",                     method="POST",asecbc=1,fun=ReciveInternetChannelCallback},
+}
+
+--main--
+local arg_t = arg_parse(arg)
+if arg_t and arg_t["list"] then
+    for k,v in pairs(hnd) do 
+        print(v["path"]..","..v["method"])
+    end
+    os.exit(0)
+end
+
+local path=nil
+local fun=nil
+if arg_t and arg_t["path"] then
+    for k,v in pairs(hnd) do
+       if arg_t["path"] == v["path"] then
+           path = v["path"]
+           fun = v["fun"]
+           break
+       end
+    end 
+    if fun then 
+       fun(arg_t["data"],arg_t["client"])
+    else
+       print([[{"respCode":"9999","respCont":"Unknow Error"}]])
+    end
+end
+
+
