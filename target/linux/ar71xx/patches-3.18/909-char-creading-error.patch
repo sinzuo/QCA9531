@@ -1,0 +1,15 @@
+Index: linux-3.18.23/drivers/char/random.c
+===================================================================
+--- linux-3.18.23.orig/drivers/char/random.c	2019-03-25 19:06:51.343113605 +0800
++++ linux-3.18.23/drivers/char/random.c	2019-03-25 19:11:26.715103882 +0800
+@@ -964,8 +964,8 @@
+ 
+ 	credit_entropy_bits(&input_pool, ent_count);
+ 
+-	pr_notice("crediting %d bits => %d\n",
+-		  ent_count, input_pool.entropy_count);
++//	pr_notice("crediting %d bits => %d\n",
++//		  ent_count, input_pool.entropy_count);
+ 	/*
+ 	 * Wake up waiting processes if we have enough
+ 	 * entropy.
