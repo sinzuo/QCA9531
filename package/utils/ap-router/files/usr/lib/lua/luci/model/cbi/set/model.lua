@@ -1,5 +1,18 @@
 local nt=require "luci.sys".net                                                     
-                                                                                    
+
+local uci = require "luci.model.uci".cursor()
+local sectionname=uci:get_first("sets","model")
+local proto=uci:get("network","lan","proto")
+local model=uci:get_first("sets","model","enable")
+if sectionname then
+    if "dhcp" == proto and (not model or "1" == model) then
+        uci:set("sets",sectionname,"enable",0)
+        uci:commit("sets")
+    elseif "static" == proto and (not model or "0" == model) then
+        uci:set("sets",sectionname,"enable",1)
+        uci:commit("sets")
+    end
+end
                                                                                     
 local m,s,o,mp,ml,flag                                                              
                         
