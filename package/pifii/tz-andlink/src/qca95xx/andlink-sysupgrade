@@ -87,6 +87,6 @@ if 0 == dres then
     end
     os.execute(string.format([[sleep 3 && sysupgrade -c %s >/dev/null 2>&1 &]],filepath))
     local sv=util.exec([[cat /etc/openwrt_version | tr -d "\n|\r"]])
-    uci:set(andlk,"event","version",sv)
+    uci:set(andlk,"event","preversion",sv)
     uci:commit(andlk)
 end

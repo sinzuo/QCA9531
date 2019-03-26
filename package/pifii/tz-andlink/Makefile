@@ -1,7 +1,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=tz-andlink
-PKG_RELEASE:=1.15
+PKG_RELEASE:=1.16
 
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)
 

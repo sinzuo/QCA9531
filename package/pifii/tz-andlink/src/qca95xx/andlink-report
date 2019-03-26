@@ -55,7 +55,7 @@ function get_online_data()
                       deviceSn = g_sn, --get_sn(devmac), --"C170710010116021863",
                       apUplinkType = apUplinkType,
                       radio5 = isRadio5,
-                      SyncCode = uci:get("andlink","andlink","sysc_code") or "0"
+                      SyncCode = uci:get("andlink","andlink","sync_code") or "0"
               }
     }
     return d 
@@ -206,12 +206,15 @@ function coap_send_heartbeat(gwip)
     local hb_count = 0
     local hb_time = uci:get("andlink","andlink","heartbeat_time")
     if not hb_time then return nil end
+    local unbind = nil
     while true do
         uci:load("andlink")
+        unbind = uci:get("andlink","andlink","unbind")
+        if "1" == unbind then break end
         gwip = uci:get("andlink","andlink","gateway") --must get gateway addr agin
         devid = uci:get("andlink","andlink","device_id") --must get device id again 
         if not gwip or "" == gwip or not devid or "" == devid then 
-            D("device was unbound")
+            D("gateway and device id not found")
             break
         end
         str_hb = json.encode({deviceId=devid})
@@ -270,7 +273,14 @@ function coap_report(gwip)
 end
 
 local gwip = nil
+local unbind = nil
 while true do
+    uci:load("andlink")
+    unbind = uci:get("andlink","andlink","unbind")
+    if "1" == unbind then
+        D("device was unbind")
+        break
+    end
     if 0 ~= os.execute("test -f /tmp/qlink.pid") then
         gwip = search_gateway()
         if gwip then

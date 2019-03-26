@@ -880,6 +880,7 @@ function unbind(data,client)
        uci:set(andlk,"andlink","device_token","") 
        uci:set(andlk,"andlink","andlink_token","") 
        uci:set(andlk,"andlink","gateway_token","") 
+       uci:set(andlk,"andlink","unbind","1")
        uci:delete(andlk,"MacFilter")
        uci:commit(andlk)
    else
@@ -926,12 +927,12 @@ function file_process(data,client)
                    local sysupcmd=string.format([[andlink-sysupgrade -u %s -a %s >/dev/null 2>&1 &]],fu,c["ip"])
                    D(sysupcmd)
                    os.execute(sysupcmd)
-                   local sv=util.exec([[cat /etc/openwrt_version | tr -d "\n|\r"]])
-                   if not uci:get(andlk,"event") then
-                       uci:section(andlk,"event","event")
-                   end
-                   uci:set(andlk,"event","preversion",sv)
-                   uci:commit(andlk)
+                   --local sv=util.exec([[cat /etc/openwrt_version | tr -d "\n|\r"]])
+                   --if not uci:get(andlk,"event") then
+                   --    uci:section(andlk,"event","event")
+                   --end
+                   --uci:set(andlk,"event","preversion",sv)
+                   --uci:commit(andlk)
                end
            end
        until true
