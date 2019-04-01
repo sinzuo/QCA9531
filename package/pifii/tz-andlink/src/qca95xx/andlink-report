@@ -81,6 +81,9 @@ function search_gateway()
             D("get gateway ip:"..gwip)
             break
         else
+            uci:load("andlink")
+            uci:set("andlink","andlink","gateway","")
+            uci:commit("andlink")
             --bc_cmd=string.format([[coap-broadcast coap://%s/qlink/searchgw -N -e '{"searchKey":"ANDLINK-DEVICE","andlinkVersion":"V3"}']],bcip)
             bc_cmd=string.format([[coap-broadcast -N -e '{"searchKey":"ANDLINK-DEVICE","andlinkVersion":"V3"}' coap://%s/qlink/searchgw]],bcip)
             D(bc_cmd)
@@ -235,6 +238,11 @@ function coap_send_heartbeat(gwip)
             else
                 hb_count = 0
             end
+        else
+            hb_count = hb_count + 1
+            if 10 < hb_count then
+                break
+            end
         end
         sleep(hb_time/1000)
     end
@@ -273,6 +281,7 @@ function coap_report(gwip)
 end
 
 local gwip = nil
+local tcount = 0
 local unbind = nil
 while true do
     uci:load("andlink")
@@ -284,14 +293,30 @@ while true do
     if 0 ~= os.execute("test -f /tmp/qlink.pid") then
         gwip = search_gateway()
         if gwip then
-            --[[
             local ifa = util.ubus("network.interface.lan","status")
             if ifa and "dhcp" ~= ifa.proto then --router mode
-                os.execute("/bin/setdevmode mode=ap >/dev/null") --To ap mode if it's smart gateway.
+                local sename = uci:get_first("sets","model")
+                if sename then
+                    uci:set("sets",sename,"enable","0")
+                    uci:commit("sets")
+                end
+                os.execute("/sbin/modelchange 2>&1 >/dev/null") --To ap mode if it's smart gateway.
                 sleep(10) --waiting for /etc/init.d/network restart
             end
-            --]]
+            tcount = 0
             coap_report(gwip)
+        else
+            local ifa = util.ubus("network.interface.lan","status")
+            if tcount >= 2 and ifa and "dhcp" == ifa.proto then --ap mode to router
+                local sename = uci:get_first("sets","model")
+                if sename then
+                    uci:set("sets",sename,"enable","1")
+                    uci:commit("sets")
+                end
+                os.execute("/sbin/modelchange 2>&1 >/dev/null") --To ap mode if it's smart gateway.
+                sleep(10) --waiting for /etc/init.d/network restart
+            end
+            tcount = tcount + 1
         end
     end
     sleep(30)
