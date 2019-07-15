@@ -1,5 +1,5 @@
 IWINFO_BACKENDS    = $(BACKENDS)
-IWINFO_CFLAGS      = $(CFLAGS) -std=gnu99 -fstrict-aliasing -Iinclude
+IWINFO_CFLAGS      = $(CFLAGS) -std=gnu99 -fstrict-aliasing -Iinclude -I/mnt/QCA9531/qca/src/qca-wifi-10.4/os/linux/include -I/mnt/QCA9531/qca/src/qca-wifi-10.4/include -I/mnt/QCA9531/qca/src/qca-wifi-10.4/lmac/ath_dev/
 
 IWINFO_LIB         = libiwinfo.so
 IWINFO_LIB_LDFLAGS = $(LDFLAGS) -shared
